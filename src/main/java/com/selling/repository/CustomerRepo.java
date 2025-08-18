@@ -36,4 +36,6 @@ public interface CustomerRepo extends JpaRepository<Customer, Integer> {
 
 
     List<Customer> findByContact01(String contact01);
+
+    List<Customer> findByContact02(String contact01);
 }

@@ -9,23 +9,34 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
 
 @SpringBootApplication
-public class DemoApplication {
+public class DemoApplication extends SpringBootServletInitializer {
+
 	private static final Logger logger = LoggerFactory.getLogger(DemoApplication.class);
 	BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 	private final UserRepo userRepo;
 	private final DashboardController dashboardController;
 
+
 	@Autowired
 	public DemoApplication(UserRepo userRepo, DashboardController dashboardController) {
 		this.userRepo = userRepo;
-        this.dashboardController = dashboardController;
-    }
+		this.dashboardController = dashboardController;
+	}
+
+
+
+	@Override
+	protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
+		return application.sources(DemoApplication.class);
+	}
 
 	public static void main(String[] args) {
 		SpringApplication.run(DemoApplication.class, args);
@@ -42,8 +53,6 @@ public class DemoApplication {
 		} catch (Exception e) {
 			logger.error("An error occurred during user initialization.", e);
 		}
-
-		dashboardController.updateOrderDetails();
 
 		new Thread(() -> {
 			while (true) {

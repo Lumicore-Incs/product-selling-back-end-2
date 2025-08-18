@@ -33,9 +33,36 @@ public class CustomerServiceImpl implements CustomerService {
     @Transactional
     public Object saveCustomer(CustomerRequestDTO requestDTO, UserDto userDto) {
 
-        List<Customer> isCustomerCheck=customerRepository.findByContact01(requestDTO.getContact01());
+        List<Customer> isCustomerContact01Check=customerRepository.findByContact01(requestDTO.getContact01());
         LocalDateTime twoWeeksAgo = LocalDateTime.now().minusWeeks(2);
-        for (Customer customer : isCustomerCheck) {
+        for (Customer customer : isCustomerContact01Check) {
+            LocalDateTime date = customer.getDate();
+            if (date.isAfter(twoWeeksAgo)) {
+                // Customer date is within last 2 weeks
+                return ("true");
+            }
+        }
+
+        List<Customer> isCustomerContact02Check=customerRepository.findByContact02(requestDTO.getContact01());
+        for (Customer customer : isCustomerContact02Check) {
+            LocalDateTime date = customer.getDate();
+            if (date.isAfter(twoWeeksAgo)) {
+                // Customer date is within last 2 weeks
+                return ("true");
+            }
+        }
+
+        List<Customer> isCustomerContact01Check02=customerRepository.findByContact01(requestDTO.getContact02());
+        for (Customer customer : isCustomerContact01Check02) {
+            LocalDateTime date = customer.getDate();
+            if (date.isAfter(twoWeeksAgo)) {
+                // Customer date is within last 2 weeks
+                return ("true");
+            }
+        }
+
+        List<Customer> isCustomerContact02Check02=customerRepository.findByContact02(requestDTO.getContact02());
+        for (Customer customer : isCustomerContact02Check02) {
             LocalDateTime date = customer.getDate();
             if (date.isAfter(twoWeeksAgo)) {
                 // Customer date is within last 2 weeks
