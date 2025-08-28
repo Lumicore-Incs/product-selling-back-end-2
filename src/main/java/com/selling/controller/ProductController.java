@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.util.List;
 
-@CrossOrigin("*")
+@CrossOrigin()
 @RestController
 @RequestMapping("/products")
 public class ProductController {
