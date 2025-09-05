@@ -39,6 +39,8 @@ public class CustomerServiceImpl implements CustomerService {
             LocalDateTime date = customer.getDate();
             if (date.isAfter(twoWeeksAgo)) {
                 // Customer date is within last 2 weeks
+                requestDTO.setCustomerId(customer.getCustomerId());
+                saveData(requestDTO, userDto);
                 return ("true");
             }
         }
@@ -48,6 +50,8 @@ public class CustomerServiceImpl implements CustomerService {
             LocalDateTime date = customer.getDate();
             if (date.isAfter(twoWeeksAgo)) {
                 // Customer date is within last 2 weeks
+                requestDTO.setCustomerId(customer.getCustomerId());
+                saveData(requestDTO, userDto);
                 return ("true");
             }
         }
@@ -57,6 +61,8 @@ public class CustomerServiceImpl implements CustomerService {
             LocalDateTime date = customer.getDate();
             if (date.isAfter(twoWeeksAgo)) {
                 // Customer date is within last 2 weeks
+                requestDTO.setCustomerId(customer.getCustomerId());
+                saveData(requestDTO, userDto);
                 return ("true");
             }
         }
@@ -66,19 +72,31 @@ public class CustomerServiceImpl implements CustomerService {
             LocalDateTime date = customer.getDate();
             if (date.isAfter(twoWeeksAgo)) {
                 // Customer date is within last 2 weeks
+                requestDTO.setCustomerId(customer.getCustomerId());
+                saveData(requestDTO, userDto);
                 return ("true");
             }
         }
+       return saveData(requestDTO, userDto);
+    }
 
+
+    private Object saveData(CustomerRequestDTO requestDTO, UserDto userDto) {
+        System.out.println("ok1111");
         // 1. Save Customer
         Customer customer = new Customer();
+        if (requestDTO.getCustomerId() != null){
+            customer.setCustomerId(requestDTO.getCustomerId());
+            customer.setStatus("TEMPORARY");
+        }
         customer.setName(requestDTO.getName());
         customer.setAddress(requestDTO.getAddress());
         customer.setContact01(requestDTO.getContact01());
         customer.setContact02(requestDTO.getContact02());
         customer.setDate(LocalDateTime.now());
+        customer.setStatus("PENDING");
         customer.setUser(userRepository.findUserById(Long.valueOf(userDto.getId())));
-        customer.setStatus("pending");
+
 
         if (requestDTO.getUserId() != null) {
             User user = userRepository.findById(Long.valueOf(requestDTO.getUserId()))
@@ -92,7 +110,11 @@ public class CustomerServiceImpl implements CustomerService {
         Order order = new Order();
         order.setCustomer(savedCustomer);
         order.setDate(LocalDateTime.now());
-        order.setStatus("pending");
+        if (requestDTO.getCustomerId() != null){
+            order.setStatus("TEMPORARY");
+        }else {
+            order.setStatus("PENDING");
+        }
         order.setRemark(requestDTO.getRemark());
         order.setTrackingId(generateTrackingId()); // Implement this method
         order.setTotalPrice(requestDTO.getTotalCost());
