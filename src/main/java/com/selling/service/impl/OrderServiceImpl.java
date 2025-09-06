@@ -1,24 +1,5 @@
 package com.selling.service.impl;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.selling.dto.CustomerDto;
-import com.selling.dto.ProductDto;
-import com.selling.dto.UserDto;
-import com.selling.dto.get.OrderDetailsDtoGet;
-import com.selling.dto.get.OrderDtoGet;
-import com.selling.model.*;
-import com.selling.repository.OrderDetailsRepo;
-import com.selling.repository.OrderRepo;
-import com.selling.service.OrderService;
-import com.selling.util.ModelMapperConfig;
-import com.vonage.client.VonageClient;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -27,13 +8,36 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.selling.dto.CustomerDto;
+import com.selling.dto.ProductDto;
+import com.selling.dto.UserDto;
+import com.selling.dto.get.OrderDetailsDtoGet;
+import com.selling.dto.get.OrderDtoGet;
+import com.selling.model.Order;
+import com.selling.model.OrderDetails;
+import com.selling.model.User;
+import com.selling.repository.OrderDetailsRepo;
+import com.selling.repository.OrderRepo;
+import com.selling.service.OrderService;
+import com.selling.util.MapperService;
+import com.vonage.client.VonageClient;
+
+import lombok.RequiredArgsConstructor;
+
 @Service
 @RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
     @Autowired
     private final OrderRepo orderRepo;
     private final OrderDetailsRepo orderDetailsRepo;
-    private final ModelMapperConfig modelMapperConfig;
+    private final MapperService mapperService;
     private final VonageClient vonageClient;
 
     @Value("${vonage.sms.sender}")
@@ -53,7 +57,12 @@ public class OrderServiceImpl implements OrderService {
 
             // Check if year, month, and day match
             if (orderDate.equals(today)) {
-                customerDtoGetList.add(entityToOrderDtoGet(order));
+                if (order.getCustomer() != null) {
+                    OrderDtoGet map = mapperService.map(order, OrderDtoGet.class);
+                    map.setCustomerId(mapperService.map(order.getCustomer(), CustomerDto.class));
+                    map.setOrderDetails(getOrderDetailsData(order));
+                    customerDtoGetList.add(map);
+                }
             }
         }
         return customerDtoGetList;
@@ -65,7 +74,12 @@ public class OrderServiceImpl implements OrderService {
         List<Order> allCustomer = orderRepo.findAll();
 
         for (Order order : allCustomer) {
-            customerDtoGetList.add(entityToOrderDtoGet(order));
+            if (order.getCustomer() != null) {
+                OrderDtoGet map = mapperService.map(order, OrderDtoGet.class);
+                map.setCustomerId(mapperService.map(order.getCustomer(), CustomerDto.class));
+                map.setOrderDetails(getOrderDetailsData(order));
+                customerDtoGetList.add(map);
+            }
         }
         return customerDtoGetList;
     }
@@ -76,13 +90,18 @@ public class OrderServiceImpl implements OrderService {
         List<OrderDtoGet> orderDtoGetList = new ArrayList<>();
 
         LocalDate today = LocalDate.now();
-        List<Order> userOrders = orderRepo.findByCustomerUser(dtoToUserEntity(userDto));
+    List<Order> userOrders = orderRepo.findByCustomerUser((userDto == null) ? null : mapperService.map(userDto, User.class));
 
         for (Order order : userOrders) {
             LocalDate orderDate = order.getDate().toLocalDate();
 
             if (orderDate.equals(today)) {
-                orderDtoGetList.add(entityToOrderDtoGet(order));
+                if (order.getCustomer() != null) {
+                    OrderDtoGet map = mapperService.map(order, OrderDtoGet.class);
+                    map.setCustomerId(mapperService.map(order.getCustomer(), CustomerDto.class));
+                    map.setOrderDetails(getOrderDetailsData(order));
+                    orderDtoGetList.add(map);
+                }
             }
         }
         return orderDtoGetList;
@@ -91,9 +110,14 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public List<OrderDtoGet> getAllOrderByUserId(UserDto userDto) {
         List<OrderDtoGet> orderDtoGetList = new ArrayList<>();
-        List<Order> userOrders = orderRepo.findByCustomerUser(dtoToUserEntity(userDto));
+        List<Order> userOrders = orderRepo.findByCustomerUser((userDto == null) ? null : mapperService.map(userDto, User.class));
         for (Order order : userOrders) {
-            orderDtoGetList.add(entityToOrderDtoGet(order));
+            if (order.getCustomer() != null) {
+                OrderDtoGet map = mapperService.map(order, OrderDtoGet.class);
+                map.setCustomerId(mapperService.map(order.getCustomer(), CustomerDto.class));
+                map.setOrderDetails(getOrderDetailsData(order));
+                orderDtoGetList.add(map);
+            }
         }
         return orderDtoGetList;
     }
@@ -239,46 +263,17 @@ public class OrderServiceImpl implements OrderService {
         List<OrderDetails> byOrder = orderDetailsRepo.findByOrder(orderId);
         List<OrderDetailsDtoGet> orderDetailsDtoGetList = new ArrayList<>();
         for (OrderDetails orderDetails : byOrder) {
-            orderDetailsDtoGetList.add(entityToOrderDetails(orderDetails));
+            if (orderDetails != null) {
+                OrderDetailsDtoGet map = mapperService.map(orderDetails, OrderDetailsDtoGet.class);
+                map.setProductId((orderDetails.getProduct() == null) ? null : mapperService.map(orderDetails.getProduct(), ProductDto.class));
+                orderDetailsDtoGetList.add(map);
+            }
         }
         return orderDetailsDtoGetList;
     }
 
 
-    //mapper -------------
-    private User dtoToUserEntity(UserDto userDto) {
-        return (userDto == null) ? null : modelMapperConfig.modelMapper().map(userDto, User.class);
-    }
-
-
-    private OrderDtoGet entityToOrderDtoGet(Order order) {
-        if (order.getCustomer() != null) {
-            OrderDtoGet map = modelMapperConfig.modelMapper().map(order, OrderDtoGet.class);
-            map.setCustomerId(entityToCustomer(order.getCustomer()));
-            map.setOrderDetails(getOrderDetailsData(order));
-            return map;
-        }
-        return null;
-    }
-
-
-    private OrderDetailsDtoGet entityToOrderDetails(OrderDetails orderDetails) {
-        if (orderDetails != null) {
-            OrderDetailsDtoGet map = modelMapperConfig.modelMapper().map(orderDetails, OrderDetailsDtoGet.class);
-            map.setProductId(entityToProduct(orderDetails.getProduct()));
-            return map;
-        } else {
-            return null;
-        }
-    }
-
-    private ProductDto entityToProduct(Product product) {
-        return (product == null) ? null : modelMapperConfig.modelMapper().map(product, ProductDto.class);
-    }
-
-    private CustomerDto entityToCustomer(Customer customer) {
-        return modelMapperConfig.modelMapper().map(customer, CustomerDto.class);
-    }
+    // mapping now done inline via MapperService to reduce thin-wrapper boilerplate
 
 
 }

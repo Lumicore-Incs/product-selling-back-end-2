@@ -1,12 +1,13 @@
 package com.selling.dto.get;
 
+import java.time.LocalDateTime;
+
 import com.selling.dto.UserDto;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-
-import java.time.LocalDateTime;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -20,5 +21,5 @@ public class CustomerDtoGet {
     private String contact02;
     private LocalDateTime date;
     private String status; // active, inactive
-    private UserDto userId;
+    private UserDto user;
 }

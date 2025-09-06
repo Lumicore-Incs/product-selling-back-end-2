@@ -1,5 +1,14 @@
 package com.selling.service.impl;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Random;
+
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+
 import com.selling.dto.UserDto;
 import com.selling.dto.get.UserDtoForGet;
 import com.selling.model.Otp;
@@ -10,39 +19,31 @@ import com.selling.repository.ProductRepo;
 import com.selling.repository.UserRepo;
 import com.selling.service.UserService;
 import com.selling.util.MailService;
-import com.selling.util.ModelMapperConfig;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.stereotype.Service;
-
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
+import com.selling.util.MapperService;
 
 @Service
 public class UserServiceImpl implements UserService {
 
     private final UserRepo userRepo;
-    private final ModelMapperConfig modelMapper;
+    private final MapperService mapperService;
     private final OtpRepo otpRepo;
     private final ProductRepo productRepo;
     private final MailService mailService;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
 
-    public UserServiceImpl(UserRepo userRepo, ModelMapperConfig modelMapper, OtpRepo otpRepo, ProductRepo productRepo, MailService mailService) {
+    public UserServiceImpl(UserRepo userRepo, OtpRepo otpRepo, ProductRepo productRepo, MailService mailService, MapperService mapperService) {
         this.userRepo = userRepo;
-        this.modelMapper = modelMapper;
         this.otpRepo = otpRepo;
         this.productRepo = productRepo;
         this.mailService = mailService;
+        this.mapperService = mapperService;
     }
 
     @Override
     public UserDto getUserById(String id) {
         User byId = userRepo.findUserById(Long.valueOf(id));
-        return entityToUserDto(byId);
+    return mapperService.map(byId, UserDto.class);
     }
 
     @Override
@@ -52,7 +53,7 @@ public class UserServiceImpl implements UserService {
         for (User name : userNames) {
             boolean isPasswordMatches = passwordEncoder.matches(dto.getPassword(), name.getPassword());
             if (isPasswordMatches) {
-                return entityToUserDto(name);
+                return mapperService.map(name, UserDto.class);
             }
         }
         return null;
@@ -61,20 +62,20 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDto findUserByName(String email, String userName) {
         Optional<User> userDetails = userRepo.findByEmail(email);
-        return userDetails.map(this::entityToUserDto).orElse(null);
+        return userDetails.map(user -> mapperService.map(user, UserDto.class)).orElse(null);
     }
 
     @Override
     public UserDtoForGet registerUser(UserDto userDto) {
-        User user = this.dtoToEntity(userDto);
+    User user = mapperService.map(userDto, User.class);
         System.out.println(user);
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setStatus("active");
         user.setRegistration_date(String.valueOf(LocalDateTime.now()));
         Optional<Product> byId = productRepo.findById(Long.valueOf(userDto.getProductId()));
         byId.ifPresent(user::setProduct);
-        User save = this.userRepo.save(user);
-        return entityToUserDtoForGet(save);
+    User save = this.userRepo.save(user);
+    return mapperService.map(save, UserDtoForGet.class);
     }
 
     @Override
@@ -86,9 +87,9 @@ public class UserServiceImpl implements UserService {
             userDto.setId(byId.getId());
             userDto.setStatus(byId.getStatus());
             userDto.setRegistration_date(byId.getRegistration_date());
-            User user = dtoToEntity(userDto);
+            User user = mapperService.map(userDto, User.class);
             User save = userRepo.save(user);
-            return entityToUserDtoForGet(save);
+            return mapperService.map(save, UserDtoForGet.class);
         }
     }
 
@@ -97,7 +98,7 @@ public class UserServiceImpl implements UserService {
         List<User> all = userRepo.findAll();
         List<UserDtoForGet> allUsers = new ArrayList<>();
         for (User user : all) {
-            UserDtoForGet userDto = entityToUserDtoForGet(user);
+            UserDtoForGet userDto = mapperService.map(user, UserDtoForGet.class);
             allUsers.add(userDto);
         }
         return allUsers;
@@ -164,20 +165,9 @@ public class UserServiceImpl implements UserService {
 
         user.setPassword(passwordEncoder.encode(newPassword));
         User save = userRepo.save(user);
-        return entityToUserDtoForGet(save);
+    return mapperService.map(save, UserDtoForGet.class);
     }
 
 
-    //  mapper ===================================
-    private User dtoToEntity(UserDto dto) {
-        return (dto == null) ? null : modelMapper.modelMapper().map(dto, User.class);
-    }
-
-    private UserDto entityToUserDto(User byId) {
-        return (byId == null) ? null : modelMapper.modelMapper().map(byId, UserDto.class);
-    }
-
-    private UserDtoForGet entityToUserDtoForGet(User byId) {
-        return (byId == null) ? null : modelMapper.modelMapper().map(byId, UserDtoForGet.class);
-    }
+    // mapping done inline via MapperService to reduce boilerplate
 }

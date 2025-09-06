@@ -35,7 +35,7 @@ public class CustomerController {
                 return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
             }
             UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
-            Object savedCustomer = customerService.saveCustomer(requestDTO, userDto);
+            Object savedCustomer = customerService.saveCustomerTemporory(requestDTO, userDto);
             if (savedCustomer.equals("true")){
                 return new ResponseEntity<>(savedCustomer, HttpStatus.MULTI_STATUS); //207
             }

@@ -1,18 +1,20 @@
 package com.selling.service.impl;
 
-import com.selling.dto.ProductDto;
-import com.selling.model.Product;
-import com.selling.repository.ProductRepo;
-import com.selling.service.ProductService;
-import com.selling.util.ModelMapperConfig;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.selling.dto.ProductDto;
+import com.selling.model.Product;
+import com.selling.repository.ProductRepo;
+import com.selling.service.ProductService;
+import com.selling.util.MapperService;
+
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @Service
@@ -20,7 +22,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Autowired
     private ProductRepo productRepository;
-    private final ModelMapperConfig modelMapperConfig;
+    private final MapperService mapperService;
 
 
     @Override
@@ -115,6 +117,6 @@ public class ProductServiceImpl implements ProductService {
 
 
     private ProductDto entityToDTO(Product product) {
-        return (product == null) ? null : modelMapperConfig.modelMapper().map(product, ProductDto.class);
+        return (product == null) ? null : mapperService.map(product, ProductDto.class);
     }
 }
