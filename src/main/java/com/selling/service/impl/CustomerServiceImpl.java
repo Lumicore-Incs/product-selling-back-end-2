@@ -66,7 +66,7 @@ public class CustomerServiceImpl implements CustomerService {
   // 2. Create and Save Order
   private Object createNewOrder(CustomerRequestDTO requestDTO, Optional<Customer> opt) {
     Order order = new Order();
-    // order.setCustomer(opt.get());
+    order.setCustomer(opt.get());
     order.setDate(LocalDateTime.now());
     if (requestDTO.getCustomerId() == null) {
       order.setStatus("PENDING");
