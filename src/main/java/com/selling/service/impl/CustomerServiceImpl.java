@@ -6,8 +6,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.selling.dto.CustomerRequestDTO;
 import com.selling.dto.UserDto;
@@ -39,24 +41,24 @@ public class CustomerServiceImpl implements CustomerService {
   @Override
   @Transactional
   public Object saveCustomerTemporory(CustomerRequestDTO requestDTO, UserDto userDto) {
-    String canonical = normalizeContact(
-        requestDTO.getContact01() != null ? requestDTO.getContact01() : requestDTO.getContact02());
+    String preferredContact = pickFirstNonBlankContact(requestDTO);
+    String canonical = normalizeContact(preferredContact);
 
     Optional<Customer> opt = customerRepository.findByCanonicalContact(canonical);
-    if (!opt.isPresent()) {
+    if (opt.isPresent()) {
+      requestDTO.setCustomerId(opt.get().getCustomerId());
+    } else {
       // new customer
-      opt = Optional.ofNullable(createNewCustomer(requestDTO, userDto));
+      opt = Optional.ofNullable(createNewCustomer(requestDTO, userDto, canonical));
     }
     return createNewOrder(requestDTO, opt);
   }
 
-  private Customer createNewCustomer(CustomerRequestDTO requestDTO, UserDto userDto) {
+  private Customer createNewCustomer(CustomerRequestDTO requestDTO, UserDto userDto, String canonical) {
     Customer newCustomer = mapperService.map(requestDTO, Customer.class);
     if (newCustomer.getUser() == null) {
       newCustomer.setUser(mapperService.map(userDto, User.class));
     }
-    String canonical = normalizeContact(
-        newCustomer.getContact01() != null ? newCustomer.getContact01() : newCustomer.getContact02());
     newCustomer.setCanonicalContact(canonical);
     return customerRepository.save(newCustomer);
   }
@@ -64,12 +66,12 @@ public class CustomerServiceImpl implements CustomerService {
   // 2. Create and Save Order
   private Object createNewOrder(CustomerRequestDTO requestDTO, Optional<Customer> opt) {
     Order order = new Order();
-    order.setCustomer(opt.get());
+    // order.setCustomer(opt.get());
     order.setDate(LocalDateTime.now());
-    if (requestDTO.getCustomerId() != null) {
-      order.setStatus("TEMPORARY");
-    } else {
+    if (requestDTO.getCustomerId() == null) {
       order.setStatus("PENDING");
+    } else {
+      order.setStatus("TEMPORARY");
     }
     order.setRemark(requestDTO.getRemark());
     order.setTrackingId(generateTrackingId()); // Implement this method
@@ -81,7 +83,8 @@ public class CustomerServiceImpl implements CustomerService {
     List<OrderDetails> orderDetailsList = requestDTO.getItems().stream()
         .map(item -> {
           Product product = productRepository.findById(Long.valueOf(item.getProductId()))
-              .orElseThrow(() -> new RuntimeException("Product not found with id: " + item.getProductId()));
+              .orElseThrow(() -> new ResponseStatusException(
+                  HttpStatus.NOT_FOUND, "Product not found with id: " + item.getProductId()));
 
           OrderDetails orderDetails = new OrderDetails();
           orderDetails.setOrder(savedOrder);
@@ -168,6 +171,22 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     return digits;
+  }
+
+  /**
+   * Return the first non-blank contact from the request, trimmed, or null if
+   * none.
+   */
+  private String pickFirstNonBlankContact(CustomerRequestDTO requestDTO) {
+    if (requestDTO == null)
+      return null;
+    String c1 = requestDTO.getContact01();
+    if (c1 != null && !c1.trim().isEmpty())
+      return c1.trim();
+    String c2 = requestDTO.getContact02();
+    if (c2 != null && !c2.trim().isEmpty())
+      return c2.trim();
+    return null;
   }
 
 }
