@@ -26,72 +26,74 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @RequestMapping("/order")
 public class OrderController {
-  @Autowired
-  private JWTTokenGenerator jwtTokenGenerator;
+    @Autowired
+    private JWTTokenGenerator jwtTokenGenerator;
 
-  @Autowired
-  private final OrderService orderService;
+    @Autowired
+    private final OrderService orderService;
 
-  @GetMapping
-  public ResponseEntity<Object> getAllTodayCustomer(@RequestHeader(name = "Authorization") String authorizationHeader) {
-    try {
-      if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
-        return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
-      }
-      UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
-      System.out.println(userDto.getRole());
-      if (Objects.equals(userDto.getRole(), "admin") || Objects.equals(userDto.getRole(), "ADMIN")
-          || Objects.equals(userDto.getRole(), "Admin")) {
+    @GetMapping
+    public ResponseEntity<Object> getAllTodayCustomer(@RequestHeader(name = "Authorization") String authorizationHeader) {
+        try {
+            if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
+                return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
+            }
+            UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
+            System.out.println(userDto.getRole());
+            if (Objects.equals(userDto.getRole(), "admin") || Objects.equals(userDto.getRole(), "ADMIN")
+                    || Objects.equals(userDto.getRole(), "Admin")) {
 
-        List<OrderDtoGet> allCustomer = orderService.getAllTodayOrder();
-        return new ResponseEntity<>(allCustomer, HttpStatus.OK);
-      } else {
+                List<OrderDtoGet> allCustomer = orderService.getAllTodayOrder();
+                return new ResponseEntity<>(allCustomer, HttpStatus.OK);
+            } else {
 
-        List<OrderDtoGet> allCustomer = orderService.getAllTodayOrderByUserId(userDto);
-        return new ResponseEntity<>(allCustomer, HttpStatus.OK);
-      }
-    } catch (Exception e) {
-      return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
-          HttpStatus.INTERNAL_SERVER_ERROR);
+                List<OrderDtoGet> allCustomer = orderService.getAllTodayOrderByUserId(userDto);
+                return new ResponseEntity<>(allCustomer, HttpStatus.OK);
+            }
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
-  }
 
-  @GetMapping("/allCustomer")
-  public ResponseEntity<Object> getAllCustomer(@RequestHeader(name = "Authorization") String authorizationHeader) {
-    try {
-      if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
-        return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
-      }
-      UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
-      if (Objects.equals(userDto.getRole(), "admin") || Objects.equals(userDto.getRole(), "ADMIN")
-          || Objects.equals(userDto.getRole(), "Admin")) {
+    @GetMapping("/allCustomer")
+    public ResponseEntity<Object> getAllCustomer(@RequestHeader(name = "Authorization") String authorizationHeader) {
+        try {
+            if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
+                return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
+            }
+            UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
+            if (Objects.equals(userDto.getRole(), "admin") || Objects.equals(userDto.getRole(), "ADMIN")
+                    || Objects.equals(userDto.getRole(), "Admin")) {
 
-        List<OrderDtoGet> allCustomer = orderService.getAllOrder();
-        return new ResponseEntity<>(allCustomer, HttpStatus.OK);
-      } else {
+                List<OrderDtoGet> allCustomer = orderService.getAllOrder();
+                return new ResponseEntity<>(allCustomer, HttpStatus.OK);
+            } else {
 
-        List<OrderDtoGet> allCustomer = orderService.getAllOrderByUserId(userDto);
-        return new ResponseEntity<>(allCustomer, HttpStatus.OK);
-      }
-    } catch (Exception e) {
-      return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
-          HttpStatus.INTERNAL_SERVER_ERROR);
+                List<OrderDtoGet> allCustomer = orderService.getAllOrderByUserId(userDto);
+                return new ResponseEntity<>(allCustomer, HttpStatus.OK);
+            }
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
-  }
 
-  @GetMapping("/duplicate")
-  public ResponseEntity<Object> getDuplicateCustomerOrders(
-      @RequestHeader(name = "Authorization") String authorizationHeader) {
-    if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-          .body(ApiResponse.error("Invalid token", 401));
+    @GetMapping("/duplicate")
+    public ResponseEntity<Object> getDuplicateCustomerOrders(
+            @RequestHeader(name = "Authorization") String authorizationHeader) {
+        try {
+            if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("Invalid token", 401));
+            }
+            UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
+            List<OrderDtoGet> temporaryOrders = orderService.getTemporaryOrders(userDto);
+
+            return new ResponseEntity<>(temporaryOrders, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
-    UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
-    if (!Objects.equals(userDto.getRole(), "admin") && !Objects.equals(userDto.getRole(), "ADMIN")) {
-      return ResponseEntity.status(HttpStatus.FORBIDDEN)
-          .body(ApiResponse.error("Access denied", 403));
-    }
-    List<OrderDtoGet> temporaryOrders = orderService.getTemporaryOrders();
-    return new ResponseEntity<>(temporaryOrders, HttpStatus.OK);
-  }
 }

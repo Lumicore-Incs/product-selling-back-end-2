@@ -14,7 +14,7 @@ public interface OrderService {
 
   List<OrderDtoGet> getAllOrderByUserId(UserDto userDto);
 
-  List<OrderDtoGet> getTemporaryOrders();
+  List<OrderDtoGet> getTemporaryOrders(UserDto dto);
 
   void updateOrderDetails();
 }

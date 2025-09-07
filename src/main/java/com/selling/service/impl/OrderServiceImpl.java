@@ -7,6 +7,7 @@ import java.net.URL;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -287,15 +288,30 @@ public class OrderServiceImpl implements OrderService {
   }
 
   @Override
-  public List<OrderDtoGet> getTemporaryOrders() {
+  public List<OrderDtoGet> getTemporaryOrders(UserDto userDto) {
     List<OrderDtoGet> orderDtoGetList = new ArrayList<>();
     List<Order> temporaryOrders = orderRepo.findByStatus("TEMPORARY");
-    for (Order order : temporaryOrders) {
-      OrderDtoGet dto = mapperService.map(order, OrderDtoGet.class);
-      if (order.getCustomer() != null) {
-        dto.setCustomer(mapperService.map(order.getCustomer(), CustomerDto.class));
+
+    if (Objects.equals(userDto.getRole(), "admin") || Objects.equals(userDto.getRole(), "ADMIN")){
+      for (Order order : temporaryOrders) {
+        OrderDtoGet dto = mapperService.map(order, OrderDtoGet.class);
+        dto.setOrderDetails(getOrderDetailsData(order));
+        if (order.getCustomer() != null) {
+          dto.setCustomer(mapperService.map(order.getCustomer(), CustomerDto.class));
+        }
+        orderDtoGetList.add(dto);
       }
-      orderDtoGetList.add(dto);
+    }else {
+      for (Order order : temporaryOrders) {
+        OrderDtoGet dto = mapperService.map(order, OrderDtoGet.class);
+        if (order.getCustomer() != null) {
+          dto.setCustomer(mapperService.map(order.getCustomer(), CustomerDto.class));
+          dto.setOrderDetails(getOrderDetailsData(order));
+        }
+        if (order.getCustomer().getUser().getId().equals(userDto.getId())) {
+          orderDtoGetList.add(dto);
+        }
+      }
     }
     return orderDtoGetList;
   }
