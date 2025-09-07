@@ -1,18 +1,20 @@
 package com.selling.service;
 
+import java.util.List;
+
 import com.selling.dto.UserDto;
 import com.selling.dto.get.OrderDtoGet;
 
-import java.util.List;
-
 public interface OrderService {
-    List<OrderDtoGet> getAllTodayOrder();
+  List<OrderDtoGet> getAllTodayOrder();
 
-    List<OrderDtoGet> getAllTodayOrderByUserId(UserDto userDto);
+  List<OrderDtoGet> getAllTodayOrderByUserId(UserDto userDto);
 
-    List<OrderDtoGet> getAllOrder();
+  List<OrderDtoGet> getAllOrder();
 
-    List<OrderDtoGet> getAllOrderByUserId(UserDto userDto);
+  List<OrderDtoGet> getAllOrderByUserId(UserDto userDto);
 
-    void updateOrderDetails();
+  List<OrderDtoGet> getTemporaryOrders();
+
+  void updateOrderDetails();
 }

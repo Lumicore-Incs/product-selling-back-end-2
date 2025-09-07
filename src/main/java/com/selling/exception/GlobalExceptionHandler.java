@@ -13,6 +13,7 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.selling.dto.ApiResponse;
+
 import jakarta.persistence.EntityNotFoundException;
 
 @ControllerAdvice
@@ -49,8 +50,10 @@ public class GlobalExceptionHandler {
   }
 
   @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
-  public ResponseEntity<ApiResponse<Void>> handleDataIntegrity(org.springframework.dao.DataIntegrityViolationException ex) {
-    ApiResponse<Void> body = ApiResponse.error("Data integrity violation: " + ex.getMessage(), HttpStatus.CONFLICT.value());
+  public ResponseEntity<ApiResponse<Void>> handleDataIntegrity(
+      org.springframework.dao.DataIntegrityViolationException ex) {
+    ApiResponse<Void> body = ApiResponse.error("Data integrity violation: " + ex.getMessage(),
+        HttpStatus.CONFLICT.value());
     return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
   }
 }

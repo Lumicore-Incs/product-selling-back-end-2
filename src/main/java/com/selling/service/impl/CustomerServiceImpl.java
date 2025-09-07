@@ -14,6 +14,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.selling.dto.CustomerRequestDTO;
 import com.selling.dto.UserDto;
 import com.selling.dto.get.CustomerDtoGet;
+import com.selling.dto.get.OrderDtoGet;
 import com.selling.model.Customer;
 import com.selling.model.Order;
 import com.selling.model.OrderDetails;
@@ -49,7 +50,8 @@ public class CustomerServiceImpl implements CustomerService {
       requestDTO.setCustomerId(opt.get().getCustomerId());
     } else {
       // new customer
-      opt = Optional.ofNullable(createNewCustomer(requestDTO, userDto, canonical));
+      Customer newCustomer = createNewCustomer(requestDTO, userDto, canonical);
+      opt = Optional.of(newCustomer);
     }
     return createNewOrder(requestDTO, opt);
   }
@@ -65,6 +67,10 @@ public class CustomerServiceImpl implements CustomerService {
 
   // 2. Create and Save Order
   private Object createNewOrder(CustomerRequestDTO requestDTO, Optional<Customer> opt) {
+    if (opt.isEmpty()) {
+      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Customer not found or created");
+    }
+
     Order order = new Order();
     order.setCustomer(opt.get());
     order.setDate(LocalDateTime.now());
@@ -74,17 +80,19 @@ public class CustomerServiceImpl implements CustomerService {
       order.setStatus("TEMPORARY");
     }
     order.setRemark(requestDTO.getRemark());
-    order.setTrackingId(generateTrackingId()); // Implement this method
-    order.setTotalPrice(requestDTO.getTotalCost());
+    order.setTrackingId(generateTrackingId());
+    order.setTotalPrice(requestDTO.getTotalPrice());
 
     Order savedOrder = orderRepository.save(order);
 
     // 3. Save Order Details
     List<OrderDetails> orderDetailsList = requestDTO.getItems().stream()
         .map(item -> {
-          Product product = productRepository.findById(Long.valueOf(item.getProductId()))
-              .orElseThrow(() -> new ResponseStatusException(
-                  HttpStatus.NOT_FOUND, "Product not found with id: " + item.getProductId()));
+          Product product = productRepository.findAllByProductId(item.getProductId());
+          if (product == null) {
+            throw new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "Product not found with id: " + item.getProductId());
+          }
 
           OrderDetails orderDetails = new OrderDetails();
           orderDetails.setOrder(savedOrder);
@@ -98,8 +106,11 @@ public class CustomerServiceImpl implements CustomerService {
 
     orderDetailsRepository.saveAll(orderDetailsList);
 
-    // 4. Prepare and Return Response
-    return "need to add response DTO or entity";
+    savedOrder.setOrderDetails(orderDetailsList);
+    // 4. Prepare and Return Response - Return DTO instead of entity to avoid
+    // circular references
+    OrderDtoGet orderDtoGet = mapperService.map(savedOrder, OrderDtoGet.class);
+    return orderDtoGet;
   }
 
   @Override
