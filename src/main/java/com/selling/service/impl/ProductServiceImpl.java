@@ -78,7 +78,7 @@ public class ProductServiceImpl implements ProductService {
         Optional<Product> productOptional = productRepository.findById(Long.valueOf(id));
         if (productOptional.isPresent()) {
             Product product = productOptional.get();
-            product.setStatus("remove");
+            product.setStatus("INACTIVE");
             productRepository.save(product);
             return true;
         }
