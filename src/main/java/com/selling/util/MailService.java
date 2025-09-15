@@ -63,6 +63,6 @@ public class MailService {
     private String createOtpEmailContent(String otp) {
         Context context = new Context();
         context.setVariable("otp", otp);
-        return templateEngine.process("email/otp-email", context);
+        return templateEngine.process("/email/otp-email", context);
     }
 }

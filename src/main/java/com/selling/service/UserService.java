@@ -27,4 +27,5 @@ public interface UserService {
 
     int getCustomerCount();
 
+    boolean deleteUser(Integer id);
 }

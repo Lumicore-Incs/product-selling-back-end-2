@@ -30,7 +30,7 @@ public class ProductServiceImpl implements ProductService {
         Product product = new Product();
         product.setName(productDTO.getName());
         product.setPrice(productDTO.getPrice());
-        product.setStatus("active"); // Default status
+        product.setStatus("ACTIVE"); // Default status active
 
         productRepository.save(product);
         return entityToDTO(product);
@@ -52,7 +52,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public List<ProductDto> getAllProductsUserWise() {
-        List<Product> products = productRepository.findAllByStatus("active");
+        List<Product> products = productRepository.findAllByStatus("ACTIVE");
         return products.stream()
                 .map(this::entityToDTO)
                 .collect(Collectors.toList());
@@ -91,23 +91,23 @@ public class ProductServiceImpl implements ProductService {
 
         if (name != null && minPrice != null && maxPrice != null) {
             products = productRepository.findByNameContainingAndPriceBetweenAndStatus(
-                    name, minPrice, maxPrice, "active");
+                    name, minPrice, maxPrice, "ACTIVE");
         } else if (name != null && minPrice != null) {
             products = productRepository.findByNameContainingAndPriceGreaterThanEqualAndStatus(
-                    name, minPrice, "active");
+                    name, minPrice, "ACTIVE");
         } else if (name != null && maxPrice != null) {
             products = productRepository.findByNameContainingAndPriceLessThanEqualAndStatus(
-                    name, maxPrice, "active");
+                    name, maxPrice, "ACTIVE");
         } else if (minPrice != null && maxPrice != null) {
-            products = productRepository.findByPriceBetweenAndStatus(minPrice, maxPrice, "active");
+            products = productRepository.findByPriceBetweenAndStatus(minPrice, maxPrice, "ACTIVE");
         } else if (name != null) {
-            products = productRepository.findByNameContainingAndStatus(name, "active");
+            products = productRepository.findByNameContainingAndStatus(name, "ACTIVE");
         } else if (minPrice != null) {
-            products = productRepository.findByPriceGreaterThanEqualAndStatus(minPrice, "active");
+            products = productRepository.findByPriceGreaterThanEqualAndStatus(minPrice, "ACTIVE");
         } else if (maxPrice != null) {
-            products = productRepository.findByPriceLessThanEqualAndStatus(maxPrice, "active");
+            products = productRepository.findByPriceLessThanEqualAndStatus(maxPrice, "ACTIVE");
         } else {
-            products = productRepository.findAllByStatus("active");
+            products = productRepository.findAllByStatus("ACTIVE");
         }
 
         return products.stream()

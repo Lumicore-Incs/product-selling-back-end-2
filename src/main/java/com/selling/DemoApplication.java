@@ -41,7 +41,7 @@ public class DemoApplication {
       if (byEmail.isEmpty()) {
         String encodePassword = passwordEncoder.encode("1234");
         userRepo.save(new User(null, "piyumal", "nipuna315np@gmail.com", "0754585756", "ADMIN",
-            String.valueOf(LocalDateTime.now()), "active", null, encodePassword));
+            String.valueOf(LocalDateTime.now()), "ACTIVE", null, encodePassword));
       }
     } catch (Exception e) {
       logger.error("An error occurred during user initialization.", e);

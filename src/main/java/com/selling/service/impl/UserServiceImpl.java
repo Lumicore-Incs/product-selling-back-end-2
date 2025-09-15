@@ -70,7 +70,7 @@ public class UserServiceImpl implements UserService {
     User user = mapperService.map(userDto, User.class);
         System.out.println(user);
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-        user.setStatus("active");
+        user.setStatus("ACTIVE");
         user.setRegistration_date(String.valueOf(LocalDateTime.now()));
         Optional<Product> byId = productRepo.findById(Long.valueOf(userDto.getProductId()));
         byId.ifPresent(user::setProduct);
@@ -87,6 +87,7 @@ public class UserServiceImpl implements UserService {
             userDto.setId(byId.getId());
             userDto.setStatus(byId.getStatus());
             userDto.setRegistration_date(byId.getRegistration_date());
+            userDto.setProductId(userDto.getProductId());
             User user = mapperService.map(userDto, User.class);
             User save = userRepo.save(user);
             return mapperService.map(save, UserDtoForGet.class);
@@ -156,6 +157,15 @@ public class UserServiceImpl implements UserService {
     public int getCustomerCount() {
         long count = userRepo.customerCount();
         return (int) count;
+    }
+
+    @Override
+    public boolean deleteUser(Integer id) {
+        User user = userRepo.findById(Long.valueOf(id))
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setStatus("DISABLED");
+        userRepo.save(user);
+        return true;
     }
 
     @Override

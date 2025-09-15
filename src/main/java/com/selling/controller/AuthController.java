@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @CrossOrigin()
 @RestController
@@ -90,10 +91,10 @@ public class AuthController {
 
     @PostMapping("/send")
     public String sendOtp(@RequestParam String email) {
-        boolean isSave=userService.sendOtpToEmail(email);
-        if (isSave){
+        boolean isSave = userService.sendOtpToEmail(email);
+        if (isSave) {
             return "OTP sent successfully to " + email;
-        }else {
+        } else {
             return "OTP sent failed email check again..!";
         }
     }
@@ -121,5 +122,31 @@ public class AuthController {
         userService.changePassword(dto.getEmail(), dto.getPassword());
 
         return "Password changed successfully";
+    }
+
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Object> deleteUser(@RequestHeader(name = "Authorization") String authorizationHeader,
+                                             @PathVariable Integer id) {
+        try {
+            if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
+                return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
+            }
+            UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
+            if (Objects.equals(userDto.getRole(), "admin") || Objects.equals(userDto.getRole(), "ADMIN")
+                    || Objects.equals(userDto.getRole(), "Admin")) {
+                boolean isDeleted = userService.deleteUser(id);
+
+                if (isDeleted) {
+                    return new ResponseEntity<>("User disabled successfully", HttpStatus.OK);
+                } else {
+                    return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
+                }
+            }
+            return new ResponseEntity<>("Customer not found", HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }
