@@ -35,5 +35,5 @@ public interface CustomerRepo extends JpaRepository<Customer, Integer> {
 
   List<Customer> findByUser_Id(Long id);
 
-  Optional<Customer> findByCanonicalContact(String canonicalContact);
+  Optional<Customer> findByContact01(String contact01);
 }

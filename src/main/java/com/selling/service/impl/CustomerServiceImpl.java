@@ -43,25 +43,29 @@ public class CustomerServiceImpl implements CustomerService {
   @Transactional
   public Object saveCustomerTemporory(CustomerRequestDTO requestDTO, UserDto userDto) {
     String preferredContact = pickFirstNonBlankContact(requestDTO);
-    String canonical = normalizeContact(preferredContact);
 
-    Optional<Customer> opt = customerRepository.findByCanonicalContact(canonical);
-    if (opt.isPresent()) {
-      requestDTO.setCustomerId(opt.get().getCustomerId());
-    } else {
+    // Try to find an existing customer by primary contact (contact01)
+    Optional<Customer> opt = Optional.empty();
+    if (preferredContact != null && !preferredContact.isBlank()) {
+      opt = customerRepository.findByContact01(preferredContact.trim());
+      if (opt.isPresent()) {
+        requestDTO.setCustomerId(opt.get().getCustomerId());
+      }
+    }
+
+    if (opt.isEmpty()) {
       // new customer
-      Customer newCustomer = createNewCustomer(requestDTO, userDto, canonical);
+      Customer newCustomer = createNewCustomer(requestDTO, userDto);
       opt = Optional.of(newCustomer);
     }
     return createNewOrder(requestDTO, opt);
   }
 
-  private Customer createNewCustomer(CustomerRequestDTO requestDTO, UserDto userDto, String canonical) {
+  private Customer createNewCustomer(CustomerRequestDTO requestDTO, UserDto userDto) {
     Customer newCustomer = mapperService.map(requestDTO, Customer.class);
     if (newCustomer.getUser() == null) {
       newCustomer.setUser(mapperService.map(userDto, User.class));
     }
-    newCustomer.setCanonicalContact(canonical);
     return customerRepository.save(newCustomer);
   }
 
