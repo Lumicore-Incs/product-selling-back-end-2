@@ -10,6 +10,14 @@ public class ModelMapperConfig {
     public ModelMapper modelMapper() {
         ModelMapper modelMapper = new ModelMapper();
         modelMapper.getConfiguration().setAmbiguityIgnored(true);
+        // Avoid mapping JPA lazy collections by default. Only map direct scalar fields
+        // and explicitly configured nested types to prevent LazyInitializationException
+        modelMapper.getConfiguration().setPropertyCondition(context -> {
+            Object source = context.getSource();
+            if (source == null) return false;
+            // skip mapping collections to avoid fetching lazy collections
+            return !(source instanceof java.util.Collection);
+        });
         return modelMapper;
     }
 }

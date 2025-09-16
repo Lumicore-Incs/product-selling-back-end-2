@@ -104,7 +104,7 @@ public class DashBoardServiceImpl implements DashBoardService {
         for (ExcelTypeDto excelTypeDto : pendingOrdersWithQuantities) {
             Optional<Customer> byId = customerRepo.findById(excelTypeDto.getId());
             if (byId.isPresent()) {
-                byId.get().setStatus("active");
+                byId.get().setStatus("ACTIVE");
                 customerRepo.save(byId.get());
             }
         }

@@ -1,18 +1,20 @@
 package com.selling.service.impl;
 
-import com.selling.dto.ProductDto;
-import com.selling.model.Product;
-import com.selling.repository.ProductRepo;
-import com.selling.service.ProductService;
-import com.selling.util.ModelMapperConfig;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.selling.dto.ProductDto;
+import com.selling.model.Product;
+import com.selling.repository.ProductRepo;
+import com.selling.service.ProductService;
+import com.selling.util.MapperService;
+
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @Service
@@ -20,7 +22,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Autowired
     private ProductRepo productRepository;
-    private final ModelMapperConfig modelMapperConfig;
+    private final MapperService mapperService;
 
 
     @Override
@@ -28,7 +30,7 @@ public class ProductServiceImpl implements ProductService {
         Product product = new Product();
         product.setName(productDTO.getName());
         product.setPrice(productDTO.getPrice());
-        product.setStatus("active"); // Default status
+        product.setStatus("ACTIVE"); // Default status active
 
         productRepository.save(product);
         return entityToDTO(product);
@@ -50,7 +52,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public List<ProductDto> getAllProductsUserWise() {
-        List<Product> products = productRepository.findAllByStatus("active");
+        List<Product> products = productRepository.findAllByStatus("ACTIVE");
         return products.stream()
                 .map(this::entityToDTO)
                 .collect(Collectors.toList());
@@ -76,7 +78,7 @@ public class ProductServiceImpl implements ProductService {
         Optional<Product> productOptional = productRepository.findById(Long.valueOf(id));
         if (productOptional.isPresent()) {
             Product product = productOptional.get();
-            product.setStatus("remove");
+            product.setStatus("INACTIVE");
             productRepository.save(product);
             return true;
         }
@@ -89,23 +91,23 @@ public class ProductServiceImpl implements ProductService {
 
         if (name != null && minPrice != null && maxPrice != null) {
             products = productRepository.findByNameContainingAndPriceBetweenAndStatus(
-                    name, minPrice, maxPrice, "active");
+                    name, minPrice, maxPrice, "ACTIVE");
         } else if (name != null && minPrice != null) {
             products = productRepository.findByNameContainingAndPriceGreaterThanEqualAndStatus(
-                    name, minPrice, "active");
+                    name, minPrice, "ACTIVE");
         } else if (name != null && maxPrice != null) {
             products = productRepository.findByNameContainingAndPriceLessThanEqualAndStatus(
-                    name, maxPrice, "active");
+                    name, maxPrice, "ACTIVE");
         } else if (minPrice != null && maxPrice != null) {
-            products = productRepository.findByPriceBetweenAndStatus(minPrice, maxPrice, "active");
+            products = productRepository.findByPriceBetweenAndStatus(minPrice, maxPrice, "ACTIVE");
         } else if (name != null) {
-            products = productRepository.findByNameContainingAndStatus(name, "active");
+            products = productRepository.findByNameContainingAndStatus(name, "ACTIVE");
         } else if (minPrice != null) {
-            products = productRepository.findByPriceGreaterThanEqualAndStatus(minPrice, "active");
+            products = productRepository.findByPriceGreaterThanEqualAndStatus(minPrice, "ACTIVE");
         } else if (maxPrice != null) {
-            products = productRepository.findByPriceLessThanEqualAndStatus(maxPrice, "active");
+            products = productRepository.findByPriceLessThanEqualAndStatus(maxPrice, "ACTIVE");
         } else {
-            products = productRepository.findAllByStatus("active");
+            products = productRepository.findAllByStatus("ACTIVE");
         }
 
         return products.stream()
@@ -115,6 +117,6 @@ public class ProductServiceImpl implements ProductService {
 
 
     private ProductDto entityToDTO(Product product) {
-        return (product == null) ? null : modelMapperConfig.modelMapper().map(product, ProductDto.class);
+        return (product == null) ? null : mapperService.map(product, ProductDto.class);
     }
 }

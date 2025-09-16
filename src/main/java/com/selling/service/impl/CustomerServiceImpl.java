@@ -1,190 +1,203 @@
 package com.selling.service.impl;
 
-import com.selling.dto.CustomerRequestDTO;
-import com.selling.dto.UserDto;
-import com.selling.dto.get.CustomerDtoGet;
-import com.selling.model.*;
-import com.selling.repository.*;
-import com.selling.service.CustomerService;
-import com.selling.util.ModelMapperConfig;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import com.selling.dto.CustomerRequestDTO;
+import com.selling.dto.UserDto;
+import com.selling.dto.get.CustomerDtoGet;
+import com.selling.dto.get.OrderDtoGet;
+import com.selling.model.Customer;
+import com.selling.model.Order;
+import com.selling.model.OrderDetails;
+import com.selling.model.Product;
+import com.selling.model.User;
+import com.selling.repository.CustomerRepo;
+import com.selling.repository.OrderDetailsRepo;
+import com.selling.repository.OrderRepo;
+import com.selling.repository.ProductRepo;
+import com.selling.service.CustomerService;
+import com.selling.util.MapperService;
+
+import lombok.RequiredArgsConstructor;
+
 @Service
 @RequiredArgsConstructor
 public class CustomerServiceImpl implements CustomerService {
 
-    private final CustomerRepo customerRepository;
-    private final OrderRepo orderRepository;
-    private final OrderDetailsRepo orderDetailsRepository;
-    private final ProductRepo productRepository;
-    private final UserRepo userRepository;
-    private final ModelMapperConfig modelMapperConfig;
-    private final UserRepo userRepo;
+  private final CustomerRepo customerRepository;
+  private final OrderRepo orderRepository;
+  private final OrderDetailsRepo orderDetailsRepository;
+  private final ProductRepo productRepository;
+  private final MapperService mapperService;
 
-    @Override
-    @Transactional
-    public Object saveCustomer(CustomerRequestDTO requestDTO, UserDto userDto) {
+  @Override
+  @Transactional
+  public Object saveCustomerTemporory(CustomerRequestDTO requestDTO, UserDto userDto) {
+    String preferredContact = pickFirstNonBlankContact(requestDTO);
+    String canonical = normalizeContact(preferredContact);
 
-        List<Customer> isCustomerContact01Check=customerRepository.findByContact01(requestDTO.getContact01());
-        LocalDateTime twoWeeksAgo = LocalDateTime.now().minusWeeks(2);
-        for (Customer customer : isCustomerContact01Check) {
-            LocalDateTime date = customer.getDate();
-            if (date.isAfter(twoWeeksAgo)) {
-                // Customer date is within last 2 weeks
-                requestDTO.setCustomerId(customer.getCustomerId());
-                saveData(requestDTO, userDto);
-                return ("true");
-            }
-        }
+    Optional<Customer> opt = customerRepository.findByCanonicalContact(canonical);
+    if (opt.isPresent()) {
+      requestDTO.setCustomerId(opt.get().getCustomerId());
+    } else {
+      // new customer
+      Customer newCustomer = createNewCustomer(requestDTO, userDto, canonical);
+      opt = Optional.of(newCustomer);
+    }
+    return createNewOrder(requestDTO, opt);
+  }
 
-        List<Customer> isCustomerContact02Check=customerRepository.findByContact02(requestDTO.getContact01());
-        for (Customer customer : isCustomerContact02Check) {
-            LocalDateTime date = customer.getDate();
-            if (date.isAfter(twoWeeksAgo)) {
-                // Customer date is within last 2 weeks
-                requestDTO.setCustomerId(customer.getCustomerId());
-                saveData(requestDTO, userDto);
-                return ("true");
-            }
-        }
+  private Customer createNewCustomer(CustomerRequestDTO requestDTO, UserDto userDto, String canonical) {
+    Customer newCustomer = mapperService.map(requestDTO, Customer.class);
+    if (newCustomer.getUser() == null) {
+      newCustomer.setUser(mapperService.map(userDto, User.class));
+    }
+    newCustomer.setCanonicalContact(canonical);
+    return customerRepository.save(newCustomer);
+  }
 
-        List<Customer> isCustomerContact01Check02=customerRepository.findByContact01(requestDTO.getContact02());
-        for (Customer customer : isCustomerContact01Check02) {
-            LocalDateTime date = customer.getDate();
-            if (date.isAfter(twoWeeksAgo)) {
-                // Customer date is within last 2 weeks
-                requestDTO.setCustomerId(customer.getCustomerId());
-                saveData(requestDTO, userDto);
-                return ("true");
-            }
-        }
-
-        List<Customer> isCustomerContact02Check02=customerRepository.findByContact02(requestDTO.getContact02());
-        for (Customer customer : isCustomerContact02Check02) {
-            LocalDateTime date = customer.getDate();
-            if (date.isAfter(twoWeeksAgo)) {
-                // Customer date is within last 2 weeks
-                requestDTO.setCustomerId(customer.getCustomerId());
-                saveData(requestDTO, userDto);
-                return ("true");
-            }
-        }
-       return saveData(requestDTO, userDto);
+  // 2. Create and Save Order
+  private Object createNewOrder(CustomerRequestDTO requestDTO, Optional<Customer> opt) {
+    if (opt.isEmpty()) {
+      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Customer not found or created");
     }
 
+    Order order = new Order();
+    order.setCustomer(opt.get());
+    order.setDate(LocalDateTime.now());
+    if (requestDTO.getCustomerId() == null) {
+      order.setStatus("PENDING");
+    } else {
+      order.setStatus("TEMPORARY");
+    }
+    order.setRemark(requestDTO.getRemark());
+    order.setTrackingId(generateTrackingId());
+    order.setTotalPrice(requestDTO.getTotalPrice());
 
-    private Object saveData(CustomerRequestDTO requestDTO, UserDto userDto) {
-        System.out.println("ok1111");
-        // 1. Save Customer
-        Customer customer = new Customer();
-        if (requestDTO.getCustomerId() != null){
-            customer.setCustomerId(requestDTO.getCustomerId());
-            customer.setStatus("TEMPORARY");
-        }
-        customer.setName(requestDTO.getName());
-        customer.setAddress(requestDTO.getAddress());
-        customer.setContact01(requestDTO.getContact01());
-        customer.setContact02(requestDTO.getContact02());
-        customer.setDate(LocalDateTime.now());
-        customer.setStatus("PENDING");
-        customer.setUser(userRepository.findUserById(Long.valueOf(userDto.getId())));
+    Order savedOrder = orderRepository.save(order);
 
+    // 3. Save Order Details
+    List<OrderDetails> orderDetailsList = requestDTO.getItems().stream()
+        .map(item -> {
+          Product product = productRepository.findAllByProductId(item.getProductId());
+          if (product == null) {
+            throw new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "Product not found with id: " + item.getProductId());
+          }
 
-        if (requestDTO.getUserId() != null) {
-            User user = userRepository.findById(Long.valueOf(requestDTO.getUserId()))
-                    .orElseThrow(() -> new RuntimeException("User not found"));
-            customer.setUser(user);
-        }
+          OrderDetails orderDetails = new OrderDetails();
+          orderDetails.setOrder(savedOrder);
+          orderDetails.setProduct(product);
+          orderDetails.setQty(item.getQty());
+          orderDetails.setTotal(item.getTotal());
 
-        Customer savedCustomer = customerRepository.save(customer);
+          return orderDetails;
+        })
+        .collect(Collectors.toList());
 
-        // 2. Create and Save Order
-        Order order = new Order();
-        order.setCustomer(savedCustomer);
-        order.setDate(LocalDateTime.now());
-        if (requestDTO.getCustomerId() != null){
-            order.setStatus("TEMPORARY");
-        }else {
-            order.setStatus("PENDING");
-        }
-        order.setRemark(requestDTO.getRemark());
-        order.setTrackingId(generateTrackingId()); // Implement this method
-        order.setTotalPrice(requestDTO.getTotalCost());
-        Order savedOrder = orderRepository.save(order);
+    orderDetailsRepository.saveAll(orderDetailsList);
 
-        // 3. Save Order Details
-        List<OrderDetails> orderDetailsList = requestDTO.getItems().stream()
-                .map(item -> {
-                    Product product = productRepository.findById(Long.valueOf(item.getProductId()))
-                            .orElseThrow(() -> new RuntimeException("Product not found with id: " + item.getProductId()));
+    savedOrder.setOrderDetails(orderDetailsList);
+    // 4. Prepare and Return Response - Return DTO instead of entity to avoid
+    // circular references
+    OrderDtoGet orderDtoGet = mapperService.map(savedOrder, OrderDtoGet.class);
+    return orderDtoGet;
+  }
 
-                    OrderDetails orderDetails = new OrderDetails();
-                    orderDetails.setOrder(savedOrder);
-                    orderDetails.setProduct(product);
-                    orderDetails.setQty(item.getQty());
-                    orderDetails.setTotal(item.getTotal());
+  @Override
+  public List<CustomerDtoGet> getAllCustomer() {
+    List<CustomerDtoGet> customerDtoGetList = new ArrayList<>();
+    List<Customer> allCustomer = customerRepository.findAll();
+    for (Customer customer : allCustomer) {
+      CustomerDtoGet dto = mapperService.map(customer, CustomerDtoGet.class);
+      if (customer.getUser() != null) {
+        dto.setUser(mapperService.map(customer.getUser(), com.selling.dto.UserDto.class));
+      }
+      customerDtoGetList.add(dto);
+    }
+    return customerDtoGetList;
+  }
 
-                    return orderDetails;
-                })
-                .collect(Collectors.toList());
+  @Override
+  public List<CustomerDtoGet> getAllCustomerByUserId(UserDto userDto) {
+    List<CustomerDtoGet> customerDtoGetList = new ArrayList<>();
+    List<Customer> allCustomer = customerRepository.findAllByUserId(Long.valueOf(userDto.getId()));
+    for (Customer customer : allCustomer) {
+      CustomerDtoGet dto = mapperService.map(customer, CustomerDtoGet.class);
+      if (customer.getUser() != null) {
+        dto.setUser(mapperService.map(customer.getUser(), com.selling.dto.UserDto.class));
+      }
+      customerDtoGetList.add(dto);
+    }
+    return customerDtoGetList;
+  }
 
-        orderDetailsRepository.saveAll(orderDetailsList);
+  @Override
+  public boolean deleteCustomer(Integer id) {
+    Optional<Customer> customerOptional = customerRepository.findById(id);
+    customerOptional.ifPresent(customerRepository::delete);
+    return false;
+  }
 
-        // 4. Prepare and Return Response
-        return entityToCustomerDto(savedCustomer);
+  private String generateTrackingId() {
+    return "TRK" + System.currentTimeMillis();
+  }
+
+  /**
+   * Normalize phone/contact values to a canonical string for comparison.
+   */
+  private String normalizeContact(String raw) {
+    if (raw == null)
+      return "";
+    String s = raw.trim();
+    if (s.isEmpty())
+      return "";
+
+    boolean hadPlus = s.startsWith("+");
+    String digits = s.replaceAll("\\D", "");
+    if (digits.isEmpty())
+      return "";
+
+    if (hadPlus) {
+      return "+" + digits;
     }
 
-    @Override
-    public List<CustomerDtoGet> getAllCustomer() {
-        List<CustomerDtoGet> customerDtoGetList = new ArrayList<>();
-        List<Customer> allCustomer = customerRepository.findAll();
-        for (Customer customer : allCustomer) {
-            customerDtoGetList.add(entityToCustomerDto(customer));
-        }
-        return customerDtoGetList;
+    if (digits.startsWith("0") && digits.length() > 1) {
+      return "+94" + digits.substring(1);
+    }
+    if (digits.startsWith("94") && digits.length() > 2) {
+      return "+94" + digits.substring(2);
+    }
+    if (digits.length() == 9 && digits.startsWith("7")) {
+      return "+94" + digits;
     }
 
-    @Override
-    public List<CustomerDtoGet> getAllCustomerByUserId(UserDto userDto) {
-        List<CustomerDtoGet> customerDtoGetList = new ArrayList<>();
-        List<Customer> allCustomer = customerRepository.findAllByUserId(Long.valueOf(userDto.getId()));
-        for (Customer customer : allCustomer) {
-            customerDtoGetList.add(entityToCustomerDto(customer));
-        }
-        return customerDtoGetList;
-    }
+    return digits;
+  }
 
-    @Override
-    public boolean deleteCustomer(Integer id) {
-        Optional<Customer> customerOptional = customerRepository.findById(id);
-        customerOptional.ifPresent(customerRepository::delete);
-        return false;
-    }
+  /**
+   * Return the first non-blank contact from the request, trimmed, or null if
+   * none.
+   */
+  private String pickFirstNonBlankContact(CustomerRequestDTO requestDTO) {
+    if (requestDTO == null)
+      return null;
+    String c1 = requestDTO.getContact01();
+    if (c1 != null && !c1.trim().isEmpty())
+      return c1.trim();
+    String c2 = requestDTO.getContact02();
+    if (c2 != null && !c2.trim().isEmpty())
+      return c2.trim();
+    return null;
+  }
 
-
-    private String generateTrackingId() {
-        return "TRK" + System.currentTimeMillis();
-    }
-
-    //mapper handle=============
-    private CustomerDtoGet entityToCustomerDto(Customer savedCustomer) {
-        if (savedCustomer != null) {
-            CustomerDtoGet map = modelMapperConfig.modelMapper().map(savedCustomer, CustomerDtoGet.class);
-            map.setUserId(entityToUserDto(savedCustomer.getUser()));
-            return map;
-        }
-        return null;
-    }
-
-    private UserDto entityToUserDto(User user) {
-        return modelMapperConfig.modelMapper().map(user, UserDto.class);
-    }
 }
