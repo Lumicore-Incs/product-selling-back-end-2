@@ -52,7 +52,7 @@ public class DashBoardServiceImpl implements DashBoardService {
                     }
 
                     Customer customer = order.getCustomer();
-                    customer.setStatus("print");
+                    customer.setStatus("PRINT");
                     customerRepo.save(customer);
 
                     ExcelTypeDto excelTypeDto = new ExcelTypeDto();

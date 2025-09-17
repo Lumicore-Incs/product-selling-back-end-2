@@ -19,7 +19,7 @@ public interface CustomerRepo extends JpaRepository<Customer, Integer> {
       "FROM Customer c " +
       "JOIN c.orders o " +
       "JOIN o.orderDetails od " +
-      "WHERE c.status = 'print'" +
+      "WHERE c.status = 'PRINT'" +
       "ORDER BY od.qty asc ")
   List<ExcelTypeDto> findPendingOrdersWithQuantities();
 
@@ -27,7 +27,7 @@ public interface CustomerRepo extends JpaRepository<Customer, Integer> {
       "FROM Customer c " +
       "JOIN c.orders o " +
       "JOIN o.orderDetails od " +
-      "WHERE c.status = 'pending'" +
+      "WHERE c.status = 'PENDING'" +
       "ORDER BY od.qty ASC")
   List<Order> findPendingOrdersWithQuantities(@Param("productId") Integer productId);
 
