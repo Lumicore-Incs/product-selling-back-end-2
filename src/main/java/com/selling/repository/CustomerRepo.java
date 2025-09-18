@@ -1,5 +1,6 @@
 package com.selling.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,7 +20,7 @@ public interface CustomerRepo extends JpaRepository<Customer, Integer> {
       "FROM Customer c " +
       "JOIN c.orders o " +
       "JOIN o.orderDetails od " +
-      "WHERE c.status = 'PRINT'" +
+      "WHERE c.status = 'PRINTING'" +
       "ORDER BY od.qty asc ")
   List<ExcelTypeDto> findPendingOrdersWithQuantities();
 
@@ -36,4 +37,11 @@ public interface CustomerRepo extends JpaRepository<Customer, Integer> {
   List<Customer> findByUser_Id(Long id);
 
   Optional<Customer> findByContact01(String contact01);
+
+  @Query("SELECT DISTINCT c FROM Customer c JOIN c.orders o "
+      + "WHERE (c.contact01 IN :contacts OR c.contact02 IN :contacts) "
+      + "AND o.date >= :since "
+      + "AND o.status IN :statuses")
+  List<Customer> findByContactsWithOrdersSinceAndStatus(@Param("contacts") Collection<String> contacts,
+      @Param("since") java.time.LocalDateTime since, @Param("statuses") List<String> statuses);
 }

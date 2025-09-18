@@ -42,13 +42,31 @@ public class CustomerServiceImpl implements CustomerService {
   @Override
   @Transactional
   public Object saveCustomerTemporory(CustomerRequestDTO requestDTO, UserDto userDto) {
-    String preferredContact = pickFirstNonBlankContact(requestDTO);
+    // collect both contacts if provided (contact01 and contact02)
+    String c1 = requestDTO == null ? null : requestDTO.getContact01();
+    String c2 = requestDTO == null ? null : requestDTO.getContact02();
+    List<String> contacts = new ArrayList<>();
+    if (c1 != null && !c1.isBlank())
+      contacts.add(c1.trim());
+    if (c2 != null && !c2.isBlank() && !contacts.contains(c2.trim()))
+      contacts.add(c2.trim());
 
-    // Try to find an existing customer by primary contact (contact01)
     Optional<Customer> opt = Optional.empty();
-    if (preferredContact != null && !preferredContact.isBlank()) {
-      opt = customerRepository.findByContact01(preferredContact.trim());
-      if (opt.isPresent()) {
+    if (!contacts.isEmpty()) {
+      LocalDateTime since = LocalDateTime.now().minusWeeks(2);
+      List<String> statuses = List.of("TEMPORARY", "PENDING");
+      List<Customer> recent = customerRepository.findByContactsWithOrdersSinceAndStatus(contacts, since, statuses);
+      if (recent != null && !recent.isEmpty()) {
+        // copy into mutable list then pick the customer with the most recent order
+        List<Customer> mutable = new ArrayList<>(recent);
+        mutable.sort((a, b) -> {
+          LocalDateTime ma = a.getOrders().stream().map(Order::getDate).max(LocalDateTime::compareTo)
+              .orElse(LocalDateTime.MIN);
+          LocalDateTime mb = b.getOrders().stream().map(Order::getDate).max(LocalDateTime::compareTo)
+              .orElse(LocalDateTime.MIN);
+          return mb.compareTo(ma);
+        });
+        opt = Optional.of(mutable.get(0));
         requestDTO.setCustomerId(opt.get().getCustomerId());
       }
     }
@@ -71,10 +89,6 @@ public class CustomerServiceImpl implements CustomerService {
 
   // 2. Create and Save Order
   private Object createNewOrder(CustomerRequestDTO requestDTO, Optional<Customer> opt) {
-    if (opt.isEmpty()) {
-      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Customer not found or created");
-    }
-
     Order order = new Order();
     order.setCustomer(opt.get());
     order.setDate(LocalDateTime.now());
