@@ -14,4 +14,6 @@ public interface CustomerService {
     List<CustomerDtoGet> getAllCustomerByUserId(UserDto userDto);
 
     boolean deleteCustomer(Integer id);
+
+    Object updateCustomer(Integer id, CustomerRequestDTO requestDTO);
 }

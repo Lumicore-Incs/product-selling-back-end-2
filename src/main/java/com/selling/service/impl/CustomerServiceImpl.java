@@ -218,4 +218,31 @@ public class CustomerServiceImpl implements CustomerService {
     return null;
   }
 
+  @Override
+  public Object updateCustomer(Integer id, CustomerRequestDTO requestDTO) {
+    try{
+      Optional<Customer> customerOptional = customerRepository.findById(id);
+      if (customerOptional.isPresent()) {
+        Customer customer = customerOptional.get();
+        Customer requestCustomer = mapperService.map(requestDTO, Customer.class);
+        Integer orderId = requestDTO.getItems().get(0).getOrderId();
+        Order reqOrder =null;
+        for(Order order : customer.getOrders()){
+          if(order.getOrderId().equals(orderId)){
+            reqOrder = order;
+            reqOrder.setStatus("PENDING");
+            requestCustomer.setDate(customer.getDate());
+          }
+        }
+        //customerRepository.save(requestCustomer);
+        orderRepository.save(reqOrder);
+        return mapperService.map(requestCustomer, CustomerDtoGet.class);
+      } else {
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Customer not found");
+      }
+    }catch(Exception e){
+      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error updating customer: " + e.getMessage());
+    }
+  }
+
 }

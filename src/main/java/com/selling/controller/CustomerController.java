@@ -11,11 +11,13 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.selling.dto.ApiResponse;
 import com.selling.dto.CustomerRequestDTO;
 import com.selling.dto.UserDto;
 import com.selling.dto.get.CustomerDtoGet;
@@ -23,7 +25,6 @@ import com.selling.service.CustomerService;
 import com.selling.util.JWTTokenGenerator;
 import com.selling.util.TokenStatus;
 
-import com.selling.dto.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -92,6 +93,27 @@ public class CustomerController {
       }
     } catch (Exception e) {
       return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
+          HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @PutMapping("/{id}")
+  public ResponseEntity<Object> updateOrderStatus(
+      @RequestHeader(name = "Authorization") String authorizationHeader,
+      @PathVariable Integer id,
+      @RequestBody CustomerRequestDTO requestDTO) {
+    try {
+      if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
+        return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
+      }
+      Object updatedCustomer = customerService.updateCustomer(id, requestDTO);
+      if (updatedCustomer != null) {
+        return new ResponseEntity<>(updatedCustomer, HttpStatus.OK);
+      } else {
+        return new ResponseEntity<>("Customer not found", HttpStatus.NOT_FOUND);
+      }
+    } catch (Exception e) {
+      return new ResponseEntity<>("Error updating customer: " + e.getMessage(),
           HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
