@@ -1,19 +1,19 @@
 package com.selling.service;
 
+import java.util.List;
+
 import com.selling.dto.CustomerRequestDTO;
 import com.selling.dto.UserDto;
 import com.selling.dto.get.CustomerDtoGet;
 
-import java.util.List;
-
 public interface CustomerService {
-    Object saveCustomerTemporory(CustomerRequestDTO requestDTO, UserDto userDto);
+  Object saveCustomerTemporory(CustomerRequestDTO requestDTO, UserDto userDto);
 
-    List<CustomerDtoGet> getAllCustomer();
+  List<CustomerDtoGet> getAllCustomer();
 
-    List<CustomerDtoGet> getAllCustomerByUserId(UserDto userDto);
+  List<CustomerDtoGet> getAllCustomerByUserId(UserDto userDto);
 
-    boolean deleteCustomer(Integer id);
+  boolean deleteCustomer(Integer id);
 
-    Object updateCustomer(Integer id, CustomerRequestDTO requestDTO);
+  Object updateCustomer(Integer id, CustomerRequestDTO requestDTO);
 }

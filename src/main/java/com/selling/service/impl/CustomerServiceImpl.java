@@ -218,31 +218,29 @@ public class CustomerServiceImpl implements CustomerService {
     return null;
   }
 
+}
+
   @Override
   public Object updateCustomer(Integer id, CustomerRequestDTO requestDTO) {
-    try{
+    try {
       Optional<Customer> customerOptional = customerRepository.findById(id);
       if (customerOptional.isPresent()) {
         Customer customer = customerOptional.get();
-        Customer requestCustomer = mapperService.map(requestDTO, Customer.class);
-        Integer orderId = requestDTO.getItems().get(0).getOrderId();
-        Order reqOrder =null;
-        for(Order order : customer.getOrders()){
-          if(order.getOrderId().equals(orderId)){
-            reqOrder = order;
-            reqOrder.setStatus("PENDING");
-            requestCustomer.setDate(customer.getDate());
-          }
-        }
-        //customerRepository.save(requestCustomer);
-        orderRepository.save(reqOrder);
-        return mapperService.map(requestCustomer, CustomerDtoGet.class);
+
+        // Update simple customer fields from requestDTO
+        if (requestDTO.getName() != null) customer.setName(requestDTO.getName());
+        if (requestDTO.getAddress() != null) customer.setAddress(requestDTO.getAddress());
+        if (requestDTO.getContact01() != null) customer.setContact01(requestDTO.getContact01());
+        if (requestDTO.getContact02() != null) customer.setContact02(requestDTO.getContact02());
+
+        Customer saved = customerRepository.save(customer);
+        return mapperService.map(saved, CustomerDtoGet.class);
       } else {
         throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Customer not found");
       }
-    }catch(Exception e){
+    } catch (ResponseStatusException rse) {
+      throw rse;
+    } catch (Exception e) {
       throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error updating customer: " + e.getMessage());
     }
   }
-
-}

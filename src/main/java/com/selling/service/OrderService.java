@@ -17,4 +17,6 @@ public interface OrderService {
   List<OrderDtoGet> getTemporaryOrders(UserDto dto);
 
   void updateOrderDetails();
+
+  Object resolveDuplicateOrder(Integer orderId);
 }

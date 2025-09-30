@@ -98,7 +98,7 @@ public class CustomerController {
   }
 
   @PutMapping("/{id}")
-  public ResponseEntity<Object> updateOrderStatus(
+  public ResponseEntity<Object> updateCustomer(
       @RequestHeader(name = "Authorization") String authorizationHeader,
       @PathVariable Integer id,
       @RequestBody CustomerRequestDTO requestDTO) {
@@ -108,7 +108,7 @@ public class CustomerController {
       }
       Object updatedCustomer = customerService.updateCustomer(id, requestDTO);
       if (updatedCustomer != null) {
-        return new ResponseEntity<>(updatedCustomer, HttpStatus.OK);
+        return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success("Customer updated", updatedCustomer));
       } else {
         return new ResponseEntity<>("Customer not found", HttpStatus.NOT_FOUND);
       }

@@ -10,7 +10,9 @@ import java.util.List;
 import java.util.Objects;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -292,7 +294,7 @@ public class OrderServiceImpl implements OrderService {
     List<OrderDtoGet> orderDtoGetList = new ArrayList<>();
     List<Order> temporaryOrders = orderRepo.findByStatus("TEMPORARY");
 
-    if (Objects.equals(userDto.getRole(), "admin") || Objects.equals(userDto.getRole(), "ADMIN")){
+    if (Objects.equals(userDto.getRole(), "admin") || Objects.equals(userDto.getRole(), "ADMIN")) {
       for (Order order : temporaryOrders) {
         OrderDtoGet dto = mapperService.map(order, OrderDtoGet.class);
         dto.setOrderDetails(getOrderDetailsData(order));
@@ -301,7 +303,7 @@ public class OrderServiceImpl implements OrderService {
         }
         orderDtoGetList.add(dto);
       }
-    }else {
+    } else {
       for (Order order : temporaryOrders) {
         OrderDtoGet dto = mapperService.map(order, OrderDtoGet.class);
         if (order.getCustomer() != null) {
@@ -317,5 +319,32 @@ public class OrderServiceImpl implements OrderService {
   }
 
   // mapping now done inline via MapperService to reduce thin-wrapper boilerplate
+
+  @Override
+  public Object resolveDuplicateOrder(Integer orderId) {
+    try {
+      Order order = orderRepo.findById(orderId).orElse(null);
+      if (order == null) {
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found");
+      }
+
+      // Only resolve if status is TEMPORARY or similar
+      if ("TEMPORARY".equals(order.getStatus())) {
+        order.setStatus("PENDING");
+        orderRepo.save(order);
+      }
+
+      OrderDtoGet dto = mapperService.map(order, OrderDtoGet.class);
+      if (order.getCustomer() != null) {
+        dto.setCustomer(mapperService.map(order.getCustomer(), com.selling.dto.CustomerDto.class));
+      }
+      dto.setOrderDetails(getOrderDetailsData(order));
+      return dto;
+    } catch (ResponseStatusException rse) {
+      throw rse;
+    } catch (Exception e) {
+      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error resolving order: " + e.getMessage());
+    }
+  }
 
 }
