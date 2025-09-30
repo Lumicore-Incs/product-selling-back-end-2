@@ -29,7 +29,6 @@ import com.selling.repository.OrderDetailsRepo;
 import com.selling.repository.OrderRepo;
 import com.selling.service.OrderService;
 import com.selling.util.MapperService;
-import com.vonage.client.VonageClient;
 
 import lombok.RequiredArgsConstructor;
 
@@ -39,7 +38,7 @@ public class OrderServiceImpl implements OrderService {
   private final OrderRepo orderRepo;
   private final OrderDetailsRepo orderDetailsRepo;
   private final MapperService mapperService;
-  private final VonageClient vonageClient;
+  // private final VonageClient vonageClient;
 
   @Value("${vonage.sms.sender}")
   private String senderId;
@@ -141,79 +140,78 @@ public class OrderServiceImpl implements OrderService {
     }
   }
 
-  private void sendMassage(String contact01, String value) {
-    // Twilio.init("AC9ef6af7b744f3ecd66012d2fe992fc72",
-    // "8adb10540bc3d7cdab2ac906db6e148d");
-    // String whatsappNumber = "whatsapp:" + contact01;
-    // String whatsappFromNumber = "whatsapp:+14155238886";
-    // System.out.println(contact01);
-    // try {
-    // Message message = Message.creator(
-    // new PhoneNumber(whatsappNumber),
-    // new PhoneNumber(whatsappFromNumber),// Your Twilio WhatsApp number
-    // "Your order has been : " + value
-    // ).create();
-    //
-    // System.out.println("WhatsApp message sent! SID: "+ message.getSid());
-    // } catch (Exception e) {
-    // System.err.println("Failed to send WhatsApp message: " + e.getMessage());
-    // }
+  // private void sendMassage(String contact01, String value) {
+  // Twilio.init("AC9ef6af7b744f3ecd66012d2fe992fc72",
+  // "8adb10540bc3d7cdab2ac906db6e148d");
+  // String whatsappNumber = "whatsapp:" + contact01;
+  // String whatsappFromNumber = "whatsapp:+14155238886";
+  // System.out.println(contact01);
+  // try {
+  // Message message = Message.creator(
+  // new PhoneNumber(whatsappNumber),
+  // new PhoneNumber(whatsappFromNumber),// Your Twilio WhatsApp number
+  // "Your order has been : " + value
+  // ).create();
+  //
+  // System.out.println("WhatsApp message sent! SID: "+ message.getSid());
+  // } catch (Exception e) {
+  // System.err.println("Failed to send WhatsApp message: " + e.getMessage());
+  // }
 
-    // Twilio.init("AC9ef6af7b744f3ecd66012d2fe992fc72",
-    // "8adb10540bc3d7cdab2ac906db6e148d");
-    // String toNumber = contact01; // අංකයේ format: "+94771234567" (ජාත්‍යන්තර
-    // ආකාරයෙන්)
-    // String fromNumber = "+12564820760"; // ඔබගේ Twilio SMS-enabled අංකය
-    //
-    // try {
-    // Message message = Message.creator(
-    // new PhoneNumber(toNumber), // ලබන්නාගේ අංකය
-    // new PhoneNumber(fromNumber), // Twilio අංකය
-    // "Your order has been: " + value // පණිවිඩය
-    // ).create();
-    //
-    // System.out.println("SMS sent! SID: " + message.getSid());
-    // } catch (Exception e) {
-    // System.err.println("Failed to send SMS: " + e.getMessage());
-    // }
+  // Twilio.init("AC9ef6af7b744f3ecd66012d2fe992fc72",
+  // "8adb10540bc3d7cdab2ac906db6e148d");
+  // String toNumber = contact01; // අංකයේ format: "+94771234567" (ජාත්‍යන්තර
+  // ආකාරයෙන්)
+  // String fromNumber = "+12564820760"; // ඔබගේ Twilio SMS-enabled අංකය
+  //
+  // try {
+  // Message message = Message.creator(
+  // new PhoneNumber(toNumber), // ලබන්නාගේ අංකය
+  // new PhoneNumber(fromNumber), // Twilio අංකය
+  // "Your order has been: " + value // පණිවිඩය
+  // ).create();
+  //
+  // System.out.println("SMS sent! SID: " + message.getSid());
+  // } catch (Exception e) {
+  // System.err.println("Failed to send SMS: " + e.getMessage());
+  // }
 
-    // String formattedNumber = formatPhoneNumber(contact01);
-    //
-    // TextMessage message = new TextMessage(
-    // senderId,
-    // formattedNumber,
-    // value
-    // );
-    //
-    // try {
-    // SmsSubmissionResponse response =
-    // vonageClient.getSmsClient().submitMessage(message);
-    //
-    // response.getMessages().forEach(msg -> {
-    // System.out.printf("Message sent to %s. ID: %s, Status: %s%n",
-    // msg.getTo(),
-    // msg.getStatus());
-    // });
-    // } catch (Exception e) {
-    // System.err.println("Error sending SMS: " + e.getMessage());
-    // throw new RuntimeException("Failed to send SMS", e);
-    // }
+  // String formattedNumber = formatPhoneNumber(contact01);
+  //
+  // TextMessage message = new TextMessage(
+  // senderId,
+  // formattedNumber,
+  // value
+  // );
+  //
+  // try {
+  // SmsSubmissionResponse response =
+  // vonageClient.getSmsClient().submitMessage(message);
+  //
+  // response.getMessages().forEach(msg -> {
+  // System.out.printf("Message sent to %s. ID: %s, Status: %s%n",
+  // msg.getTo(),
+  // msg.getStatus());
+  // });
+  // } catch (Exception e) {
+  // System.err.println("Error sending SMS: " + e.getMessage());
+  // throw new RuntimeException("Failed to send SMS", e);
+  // }
 
-  }
+  // }
 
   // In OrderServiceImpl.java
-  private String formatPhoneNumber(String phoneNumber) {
-    // Remove any non-digit characters
-    String digits = phoneNumber.replaceAll("\\D", "");
-
-    // Handle Sri Lankan numbers (assumes numbers starting with 0 or +94)
-    if (digits.startsWith("0")) {
-      return "+94" + digits.substring(1);
-    } else if (!digits.startsWith("+")) {
-      return "+" + digits;
-    }
-    return digits;
-  }
+  // private String formatPhoneNumber(String phoneNumber) {
+  // Remove any non-digit characters
+  // String digits = phoneNumber.replaceAll("\\D", "");
+  // Handle Sri Lankan numbers (assumes numbers starting with 0 or +94)
+  // if (digits.startsWith("0")) {
+  // return "+94" + digits.substring(1);
+  // } else if (!digits.startsWith("+")) {
+  // return "+" + digits;
+  // }
+  // return digits;
+  // }
 
   private String checkTrackingStatus(String id) {
     String apiUrl = "https://api.transexpress.lk/api/v1/tracking?waybill_id=" + id;
@@ -336,7 +334,7 @@ public class OrderServiceImpl implements OrderService {
 
       OrderDtoGet dto = mapperService.map(order, OrderDtoGet.class);
       if (order.getCustomer() != null) {
-        dto.setCustomer(mapperService.map(order.getCustomer(), com.selling.dto.CustomerDto.class));
+        dto.setCustomer(mapperService.map(order.getCustomer(), CustomerDto.class));
       }
       dto.setOrderDetails(getOrderDetailsData(order));
       return dto;

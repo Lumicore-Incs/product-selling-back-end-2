@@ -170,56 +170,6 @@ public class CustomerServiceImpl implements CustomerService {
     return "TRK" + System.currentTimeMillis();
   }
 
-  /**
-   * Normalize phone/contact values to a canonical string for comparison.
-   */
-  private String normalizeContact(String raw) {
-    if (raw == null)
-      return "";
-    String s = raw.trim();
-    if (s.isEmpty())
-      return "";
-
-    boolean hadPlus = s.startsWith("+");
-    String digits = s.replaceAll("\\D", "");
-    if (digits.isEmpty())
-      return "";
-
-    if (hadPlus) {
-      return "+" + digits;
-    }
-
-    if (digits.startsWith("0") && digits.length() > 1) {
-      return "+94" + digits.substring(1);
-    }
-    if (digits.startsWith("94") && digits.length() > 2) {
-      return "+94" + digits.substring(2);
-    }
-    if (digits.length() == 9 && digits.startsWith("7")) {
-      return "+94" + digits;
-    }
-
-    return digits;
-  }
-
-  /**
-   * Return the first non-blank contact from the request, trimmed, or null if
-   * none.
-   */
-  private String pickFirstNonBlankContact(CustomerRequestDTO requestDTO) {
-    if (requestDTO == null)
-      return null;
-    String c1 = requestDTO.getContact01();
-    if (c1 != null && !c1.trim().isEmpty())
-      return c1.trim();
-    String c2 = requestDTO.getContact02();
-    if (c2 != null && !c2.trim().isEmpty())
-      return c2.trim();
-    return null;
-  }
-
-}
-
   @Override
   public Object updateCustomer(Integer id, CustomerRequestDTO requestDTO) {
     try {
@@ -228,10 +178,14 @@ public class CustomerServiceImpl implements CustomerService {
         Customer customer = customerOptional.get();
 
         // Update simple customer fields from requestDTO
-        if (requestDTO.getName() != null) customer.setName(requestDTO.getName());
-        if (requestDTO.getAddress() != null) customer.setAddress(requestDTO.getAddress());
-        if (requestDTO.getContact01() != null) customer.setContact01(requestDTO.getContact01());
-        if (requestDTO.getContact02() != null) customer.setContact02(requestDTO.getContact02());
+        if (requestDTO.getName() != null)
+          customer.setName(requestDTO.getName());
+        if (requestDTO.getAddress() != null)
+          customer.setAddress(requestDTO.getAddress());
+        if (requestDTO.getContact01() != null)
+          customer.setContact01(requestDTO.getContact01());
+        if (requestDTO.getContact02() != null)
+          customer.setContact02(requestDTO.getContact02());
 
         Customer saved = customerRepository.save(customer);
         return mapperService.map(saved, CustomerDtoGet.class);
@@ -244,3 +198,4 @@ public class CustomerServiceImpl implements CustomerService {
       throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error updating customer: " + e.getMessage());
     }
   }
+}
