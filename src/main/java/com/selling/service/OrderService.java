@@ -19,4 +19,6 @@ public interface OrderService {
   void updateOrderDetails();
 
   Object resolveDuplicateOrder(Integer orderId);
+
+  Object deleteOrder(Integer orderId);
 }

@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -115,6 +116,31 @@ public class OrderController {
       return new ResponseEntity<>(temporaryOrders, HttpStatus.OK);
     } catch (Exception e) {
       return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
+          HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @DeleteMapping("/{id}")
+  public ResponseEntity<Object> deleteOrder(@RequestHeader(name = "Authorization") String authorizationHeader,
+      @PathVariable Integer id) {
+    try {
+      if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(ApiResponse.error("Invalid token", 401));
+      }
+      UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
+      if (!(Objects.equals(userDto.getRole(), "admin") || Objects.equals(userDto.getRole(), "ADMIN")
+          || Objects.equals(userDto.getRole(), "Admin"))) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+            .body(ApiResponse.error("Forbidden: admin only", 403));
+      }
+
+      Object result = orderService.deleteOrder(id);
+      return new ResponseEntity<>(result, HttpStatus.OK);
+    } catch (ResponseStatusException rse) {
+      return new ResponseEntity<>(rse.getReason(), rse.getStatusCode());
+    } catch (Exception e) {
+      return new ResponseEntity<>("Error deleting order: " + e.getMessage(),
           HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }

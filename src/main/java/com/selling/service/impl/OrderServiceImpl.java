@@ -1,5 +1,7 @@
 package com.selling.service.impl;
 
+import static com.selling.dto.ApiResponse.success;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -12,6 +14,7 @@ import java.util.Objects;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.google.gson.JsonArray;
@@ -342,6 +345,30 @@ public class OrderServiceImpl implements OrderService {
       throw rse;
     } catch (Exception e) {
       throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error resolving order: " + e.getMessage());
+    }
+  }
+
+  @Override
+  @Transactional
+  public Object deleteOrder(Integer orderId) {
+    try {
+      Order order = orderRepo.findById(orderId).orElse(null);
+      if (order == null) {
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found");
+      }
+
+      List<OrderDetails> details = orderDetailsRepo.findByOrder(order);
+      if (details != null && !details.isEmpty()) {
+        orderDetailsRepo.deleteAll(details);
+      }
+
+      orderRepo.delete(order);
+
+      return success("Order deleted successfully", null);
+    } catch (ResponseStatusException rse) {
+      throw rse;
+    } catch (Exception e) {
+      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error deleting order: " + e.getMessage());
     }
   }
 
