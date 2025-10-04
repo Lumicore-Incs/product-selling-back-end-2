@@ -62,7 +62,25 @@ public class AuthController {
       return new ResponseEntity<>(dto, HttpStatus.CREATED);
     } else {
       System.out.println(isUser);
-      return new ResponseEntity<>("Email is All Ready exist", HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>("Email is Allready exist", HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  @PostMapping("/create")
+  public ResponseEntity<Object> createUser(@RequestBody UserDto userDto) {
+    try {
+      UserDtoForGet dto = this.userService.createUser(userDto);
+      return new ResponseEntity<>(dto, HttpStatus.CREATED);
+    } catch (IllegalArgumentException iae) {
+      return new ResponseEntity<>(iae.getMessage(), HttpStatus.BAD_REQUEST);
+    } catch (RuntimeException re) {
+      // treat as conflict if it's email exists
+      if (re.getMessage() != null && re.getMessage().toLowerCase().contains("email")) {
+        return new ResponseEntity<>(re.getMessage(), HttpStatus.CONFLICT);
+      }
+      return new ResponseEntity<>(re.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+    } catch (Exception e) {
+      return new ResponseEntity<>("Internal server error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 

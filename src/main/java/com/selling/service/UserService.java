@@ -1,31 +1,33 @@
 package com.selling.service;
 
+import java.util.List;
+
 import com.selling.dto.UserDto;
 import com.selling.dto.get.UserDtoForGet;
 
-import java.util.List;
-
 public interface UserService {
 
-    UserDto getUserById(String id);
+  UserDto getUserById(String id);
 
-    UserDto userLogin(UserDto dto);
+  UserDto userLogin(UserDto dto);
 
-    UserDto findUserByName(String email, String userName);
+  UserDto findUserByName(String email, String userName);
 
-    UserDtoForGet registerUser(UserDto userDto);
+  UserDtoForGet registerUser(UserDto userDto);
 
-    UserDtoForGet updateUser(UserDto userDto, Long userId);
+  UserDtoForGet createUser(UserDto userDto);
 
-    List<UserDtoForGet> getAllUser();
+  UserDtoForGet updateUser(UserDto userDto, Long userId);
 
-    UserDtoForGet changePassword(String email, String newPassword);
+  List<UserDtoForGet> getAllUser();
 
-    boolean sendOtpToEmail(String email);
+  UserDtoForGet changePassword(String email, String newPassword);
 
-    boolean validateOtp(String email, String otp);
+  boolean sendOtpToEmail(String email);
 
-    int getCustomerCount();
+  boolean validateOtp(String email, String otp);
 
-    boolean deleteUser(Integer id);
+  int getCustomerCount();
+
+  boolean deleteUser(Integer id);
 }
