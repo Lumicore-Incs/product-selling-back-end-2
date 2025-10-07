@@ -72,7 +72,8 @@ public class OrderController {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
             .body(ApiResponse.error("Invalid token", 401));
       }
-      Object result = orderService.resolveDuplicateOrder(id, requestDTO);
+      UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
+      Object result = orderService.resolveDuplicateOrder(id, userDto.getRole(), requestDTO);
       return new ResponseEntity<>(result, HttpStatus.OK);
     } catch (ResponseStatusException rse) {
       return new ResponseEntity<>(rse.getReason(), rse.getStatusCode());

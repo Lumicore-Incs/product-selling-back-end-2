@@ -325,10 +325,9 @@ public class OrderServiceImpl implements OrderService {
     return orderDtoGetList;
   }
 
-  // mapping now done inline via MapperService to reduce thin-wrapper boilerplate
-
+  // here we have added order update flow to this same method
   @Override
-  public Object resolveDuplicateOrder(Integer orderId, CustomerRequestDTO requestDTO) {
+  public Object resolveDuplicateOrder(Integer orderId, String userRole, CustomerRequestDTO requestDTO) {
     try {
       Order order = orderRepo.findById(orderId).orElse(null);
       if (order == null) {
@@ -336,34 +335,34 @@ public class OrderServiceImpl implements OrderService {
       }
 
       // Only resolve if status is TEMPORARY or similar
-      if ("TEMPORARY".equals(order.getStatus())) {
+      if ("TEMPORARY".equals(order.getStatus()) && Objects.equals(userRole, "ADMIN")) {
         order.setStatus("PENDING");
-        order.setTotalPrice(requestDTO.getTotalPrice());
-        order.setRemark(requestDTO.getRemark());
-        Order savedOrder = orderRepo.save(order);
-
-        // 3. Save Order Details
-        List<OrderDetails> orderDetailsList = requestDTO.getItems().stream()
-            .map(item -> {
-              Product product = productRepository.findAllByProductId(item.getProductId());
-              if (product == null) {
-                throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND, "Product not found with id: " + item.getProductId());
-              }
-
-              OrderDetails orderDetails = new OrderDetails();
-              orderDetails.setOrderDetailsId(item.getOrderDetailsId());
-              orderDetails.setOrder(savedOrder);
-              orderDetails.setProduct(product);
-              orderDetails.setQty(item.getQty());
-              orderDetails.setTotal(item.getTotal());
-
-              return orderDetails;
-            })
-            .collect(Collectors.toList());
-
-        orderDetailsRepo.saveAll(orderDetailsList);
       }
+      order.setTotalPrice(requestDTO.getTotalPrice());
+      order.setRemark(requestDTO.getRemark());
+      Order savedOrder = orderRepo.save(order);
+
+      // 3. Save Order Details
+      List<OrderDetails> orderDetailsList = requestDTO.getItems().stream()
+          .map(item -> {
+            Product product = productRepository.findAllByProductId(item.getProductId());
+            if (product == null) {
+              throw new ResponseStatusException(
+                  HttpStatus.NOT_FOUND, "Product not found with id: " + item.getProductId());
+            }
+
+            OrderDetails orderDetails = new OrderDetails();
+            orderDetails.setOrderDetailsId(item.getOrderDetailsId());
+            orderDetails.setOrder(savedOrder);
+            orderDetails.setProduct(product);
+            orderDetails.setQty(item.getQty());
+            orderDetails.setTotal(item.getTotal());
+
+            return orderDetails;
+          })
+          .collect(Collectors.toList());
+
+      orderDetailsRepo.saveAll(orderDetailsList);
 
       OrderDtoGet dto = mapperService.map(order, OrderDtoGet.class);
       if (order.getCustomer() != null) {

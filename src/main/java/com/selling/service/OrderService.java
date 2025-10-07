@@ -19,7 +19,7 @@ public interface OrderService {
 
   void updateOrderDetails();
 
-  Object resolveDuplicateOrder(Integer orderId, CustomerRequestDTO requestDTO);
+  Object resolveDuplicateOrder(Integer orderId, String userRole, CustomerRequestDTO requestDTO);
 
   Object deleteOrder(Integer orderId);
 }
