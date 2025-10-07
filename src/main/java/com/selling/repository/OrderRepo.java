@@ -24,4 +24,10 @@ public interface OrderRepo extends JpaRepository<Order, Integer> {
 
   // Find orders by status
   List<Order> findByStatus(String status);
+
+  // Find orders between two datetimes (useful for today's orders)
+  List<Order> findByDateBetween(LocalDateTime start, LocalDateTime end);
+
+  // int countByUserId(Long id);
+
 }

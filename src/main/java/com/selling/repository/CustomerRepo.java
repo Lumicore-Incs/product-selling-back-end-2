@@ -32,8 +32,6 @@ public interface CustomerRepo extends JpaRepository<Customer, Integer> {
       "ORDER BY od.qty ASC")
   List<Order> findPendingOrdersWithQuantities(@Param("productId") Integer productId);
 
-  int countByUserId(Long id);
-
   List<Customer> findByUser_Id(Long id);
 
   Optional<Customer> findByContact01(String contact01);

@@ -1,5 +1,6 @@
 package com.selling.service.impl;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -116,17 +117,23 @@ public class DashBoardServiceImpl implements DashBoardService {
   @Override
   public int getTotalOrder(UserDto user) {
     if (user.getRole().equals("admin") || user.getRole().equals("ADMIN") || user.getRole().equals("Admin")) {
-      return (int) customerRepo.count();
+      return (int) orderRepo.count();
     }
-    return customerRepo.countByUserId(user.getId());
+    return (int) orderRepo.count();
+    // need to update this when userId added to orders table
+    // return orderRepo.countByUserId(user.getId());
   }
 
   @Override
   public int getTodayOrder(UserDto user) {
+    LocalDateTime start = LocalDate.now().atStartOfDay();
+    LocalDateTime end = start.plusDays(1);
     if (user.getRole().equals("admin") || user.getRole().equals("ADMIN") || user.getRole().equals("Admin")) {
-
+      return orderRepo.findByDateBetween(start, end).size();
     }
-    return 0;
+    // need to update this when userId added to orders table
+
+    return orderRepo.findByDateBetween(start, end).size();
   }
 
   @Override
