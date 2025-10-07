@@ -6,6 +6,7 @@ import org.modelmapper.convention.MatchingStrategies;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.selling.dto.UserDto;
 import com.selling.dto.get.UserDtoForGet;
 import com.selling.model.User;
 
@@ -30,6 +31,23 @@ public class ModelMapperConfig {
     // UserDtoForGet
     TypeMap<User, UserDtoForGet> userMap = modelMapper.createTypeMap(User.class, UserDtoForGet.class);
     userMap.addMappings(map -> map.map(src -> src.getProduct(), UserDtoForGet::setProductId));
+    // Map User.product.productId (Integer) into UserDto.productId (String) using a
+    // safe converter
+    // need to fix this code
+    TypeMap<User, UserDto> shortMap = modelMapper.createTypeMap(User.class, UserDto.class);
+    org.modelmapper.Converter<User, String> productIdConverter = ctx -> {
+      try {
+        User src = ctx.getSource();
+        if (src == null || src.getProduct() == null)
+          return null;
+        Integer pid = src.getProduct().getProductId();
+        return pid == null ? null : String.valueOf(pid);
+      } catch (Exception e) {
+        // swallow mapping exceptions and return null to avoid ModelMapper failure
+        return null;
+      }
+    };
+    shortMap.addMappings(m -> m.using(productIdConverter).map(src -> src, UserDto::setProductId));
     return modelMapper;
   }
 }

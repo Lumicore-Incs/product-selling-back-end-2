@@ -2,6 +2,7 @@ package com.selling.service;
 
 import java.util.List;
 
+import com.selling.dto.CustomerRequestDTO;
 import com.selling.dto.UserDto;
 import com.selling.dto.get.OrderDtoGet;
 
@@ -18,7 +19,7 @@ public interface OrderService {
 
   void updateOrderDetails();
 
-  Object resolveDuplicateOrder(Integer orderId);
+  Object resolveDuplicateOrder(Integer orderId, CustomerRequestDTO requestDTO);
 
   Object deleteOrder(Integer orderId);
 }

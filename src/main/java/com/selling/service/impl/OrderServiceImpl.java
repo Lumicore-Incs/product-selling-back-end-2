@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -21,15 +22,18 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.selling.dto.CustomerDto;
+import com.selling.dto.CustomerRequestDTO;
 import com.selling.dto.ProductDto;
 import com.selling.dto.UserDto;
 import com.selling.dto.get.OrderDetailsDtoGet;
 import com.selling.dto.get.OrderDtoGet;
 import com.selling.model.Order;
 import com.selling.model.OrderDetails;
+import com.selling.model.Product;
 import com.selling.model.User;
 import com.selling.repository.OrderDetailsRepo;
 import com.selling.repository.OrderRepo;
+import com.selling.repository.ProductRepo;
 import com.selling.service.OrderService;
 import com.selling.util.MapperService;
 
@@ -41,6 +45,8 @@ public class OrderServiceImpl implements OrderService {
   private final OrderRepo orderRepo;
   private final OrderDetailsRepo orderDetailsRepo;
   private final MapperService mapperService;
+  private final ProductRepo productRepository;
+
   // private final VonageClient vonageClient;
 
   @Value("${vonage.sms.sender}")
@@ -322,7 +328,7 @@ public class OrderServiceImpl implements OrderService {
   // mapping now done inline via MapperService to reduce thin-wrapper boilerplate
 
   @Override
-  public Object resolveDuplicateOrder(Integer orderId) {
+  public Object resolveDuplicateOrder(Integer orderId, CustomerRequestDTO requestDTO) {
     try {
       Order order = orderRepo.findById(orderId).orElse(null);
       if (order == null) {
@@ -332,7 +338,31 @@ public class OrderServiceImpl implements OrderService {
       // Only resolve if status is TEMPORARY or similar
       if ("TEMPORARY".equals(order.getStatus())) {
         order.setStatus("PENDING");
-        orderRepo.save(order);
+        order.setTotalPrice(requestDTO.getTotalPrice());
+        order.setRemark(requestDTO.getRemark());
+        Order savedOrder = orderRepo.save(order);
+
+        // 3. Save Order Details
+        List<OrderDetails> orderDetailsList = requestDTO.getItems().stream()
+            .map(item -> {
+              Product product = productRepository.findAllByProductId(item.getProductId());
+              if (product == null) {
+                throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "Product not found with id: " + item.getProductId());
+              }
+
+              OrderDetails orderDetails = new OrderDetails();
+              orderDetails.setOrderDetailsId(item.getOrderDetailsId());
+              orderDetails.setOrder(savedOrder);
+              orderDetails.setProduct(product);
+              orderDetails.setQty(item.getQty());
+              orderDetails.setTotal(item.getTotal());
+
+              return orderDetails;
+            })
+            .collect(Collectors.toList());
+
+        orderDetailsRepo.saveAll(orderDetailsList);
       }
 
       OrderDtoGet dto = mapperService.map(order, OrderDtoGet.class);

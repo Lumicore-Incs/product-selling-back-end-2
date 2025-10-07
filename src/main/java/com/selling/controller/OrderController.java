@@ -11,18 +11,21 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.selling.dto.ApiResponse;
+import com.selling.dto.CustomerRequestDTO;
 import com.selling.dto.UserDto;
 import com.selling.dto.get.OrderDtoGet;
 import com.selling.service.OrderService;
 import com.selling.util.JWTTokenGenerator;
 import com.selling.util.TokenStatus;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @CrossOrigin()
@@ -60,16 +63,16 @@ public class OrderController {
     }
   }
 
-  @PutMapping("/{id}/resolve")
+  @PutMapping("/{id}/duplicate")
   public ResponseEntity<Object> resolveDuplicateOrder(
       @RequestHeader(name = "Authorization") String authorizationHeader,
-      @PathVariable Integer id) {
+      @PathVariable Integer id, @RequestBody @Valid CustomerRequestDTO requestDTO) {
     try {
       if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
             .body(ApiResponse.error("Invalid token", 401));
       }
-      Object result = orderService.resolveDuplicateOrder(id);
+      Object result = orderService.resolveDuplicateOrder(id, requestDTO);
       return new ResponseEntity<>(result, HttpStatus.OK);
     } catch (ResponseStatusException rse) {
       return new ResponseEntity<>(rse.getReason(), rse.getStatusCode());
