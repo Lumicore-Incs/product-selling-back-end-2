@@ -17,6 +17,9 @@ public interface OrderRepo extends JpaRepository<Order, Integer> {
 
   List<Order> findTop200ByOrderByOrderIdDesc();
 
+  // Get last saved order (most recent) to determine global serial numeric part
+  Order findTopByOrderByOrderIdDesc();
+
   int countByStatusAndDateBetween(String deliver, LocalDateTime startOfMonth, LocalDateTime now);
 
   int countByCustomerUserEmailAndStatusAndDateBetween(String email, String deliver, LocalDateTime startOfMonth,

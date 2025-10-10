@@ -25,6 +25,7 @@ import com.selling.repository.OrderDetailsRepo;
 import com.selling.repository.OrderRepo;
 import com.selling.repository.ProductRepo;
 import com.selling.service.CustomerService;
+import com.selling.service.OrderService;
 import com.selling.util.MapperService;
 
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,7 @@ public class CustomerServiceImpl implements CustomerService {
   private final OrderDetailsRepo orderDetailsRepository;
   private final ProductRepo productRepository;
   private final MapperService mapperService;
+  private final OrderService orderService;
 
   @Override
   @Transactional
@@ -100,6 +102,14 @@ public class CustomerServiceImpl implements CustomerService {
     order.setRemark(requestDTO.getRemark());
     order.setTrackingId(generateTrackingId());
     order.setTotalPrice(requestDTO.getTotalPrice());
+
+    // generate serial based on product id of first item (global increment)
+    Integer firstProductId = null;
+    if (requestDTO.getItems() != null && !requestDTO.getItems().isEmpty()) {
+      firstProductId = requestDTO.getItems().get(0).getProductId();
+    }
+    String serial = orderService.generateOrderSerialNumber(firstProductId);
+    order.setSerialNo(serial);
 
     Order savedOrder = orderRepository.save(order);
 

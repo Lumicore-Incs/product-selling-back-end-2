@@ -47,6 +47,44 @@ public class OrderServiceImpl implements OrderService {
   private final MapperService mapperService;
   private final ProductRepo productRepository;
 
+  // helper: map productId integer to a single letter a,b,c... then triple it for
+  // prefix
+  private String productPrefix(Integer productId) {
+    if (productId == null || productId <= 0)
+      return "xxx";
+    // map 1->a, 2->b, ... 26->z, then wrap around
+    int idx = (productId - 1) % 26;
+    char letter = (char) ('a' + idx);
+    return String.valueOf(letter) + letter + letter;
+  }
+
+  @Override
+  public String generateOrderSerialNumber(Integer productId) {
+    // Global increment: fetch most recent order, parse its numeric suffix,
+    // increment
+    Order last = orderRepo.findTopByOrderByOrderIdDesc();
+    long nextNum = 1L;
+    if (last != null && last.getSerialNo() != null) {
+      String serial = last.getSerialNo();
+      // numeric suffix is trailing digits; find last non-digit
+      int i = serial.length() - 1;
+      while (i >= 0 && Character.isDigit(serial.charAt(i)))
+        i--;
+      String numPart = (i < serial.length() - 1) ? serial.substring(i + 1) : null;
+      try {
+        if (numPart != null)
+          nextNum = Long.parseLong(numPart) + 1L;
+      } catch (NumberFormatException ignored) {
+        nextNum = 1L;
+      }
+    }
+
+    String prefix = productPrefix(productId);
+    // format number as 5 digits with leading zeros
+    String numFormatted = String.format("%05d", nextNum);
+    return prefix + numFormatted;
+  }
+
   // private final VonageClient vonageClient;
 
   @Value("${vonage.sms.sender}")

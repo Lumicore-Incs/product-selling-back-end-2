@@ -22,4 +22,7 @@ public interface OrderService {
   Object resolveDuplicateOrder(Integer orderId, String userRole, CustomerRequestDTO requestDTO);
 
   Object deleteOrder(Integer orderId);
+
+  // Generate serial number for an order based on product id
+  String generateOrderSerialNumber(Integer productId);
 }
