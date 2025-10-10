@@ -31,6 +31,8 @@ public interface OrderRepo extends JpaRepository<Order, Integer> {
   // Find orders between two datetimes (useful for today's orders)
   List<Order> findByDateBetween(LocalDateTime start, LocalDateTime end);
 
-  // int countByUserId(Long id);
+  List<Order> findByDateBetweenByUserId(LocalDateTime start, LocalDateTime end, Long userId);
+
+  int countByUserId(Long id);
 
 }

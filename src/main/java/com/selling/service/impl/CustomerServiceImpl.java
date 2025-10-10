@@ -78,7 +78,7 @@ public class CustomerServiceImpl implements CustomerService {
       Customer newCustomer = createNewCustomer(requestDTO, userDto);
       opt = Optional.of(newCustomer);
     }
-    return createNewOrder(requestDTO, opt);
+    return createNewOrder(requestDTO, opt, userDto);
   }
 
   private Customer createNewCustomer(CustomerRequestDTO requestDTO, UserDto userDto) {
@@ -90,9 +90,12 @@ public class CustomerServiceImpl implements CustomerService {
   }
 
   // 2. Create and Save Order
-  private Object createNewOrder(CustomerRequestDTO requestDTO, Optional<Customer> opt) {
+  private Object createNewOrder(CustomerRequestDTO requestDTO, Optional<Customer> opt, UserDto userDto) {
     Order order = new Order();
     order.setCustomer(opt.get());
+    if (userDto != null) {
+      order.setUser(mapperService.map(userDto, User.class));
+    }
     order.setDate(LocalDateTime.now());
     if (requestDTO.getCustomerId() == null) {
       order.setStatus("PENDING");

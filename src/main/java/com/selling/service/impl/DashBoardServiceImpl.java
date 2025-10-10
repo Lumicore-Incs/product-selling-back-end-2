@@ -119,9 +119,7 @@ public class DashBoardServiceImpl implements DashBoardService {
     if (user.getRole().equals("admin") || user.getRole().equals("ADMIN") || user.getRole().equals("Admin")) {
       return (int) orderRepo.count();
     }
-    return (int) orderRepo.count();
-    // need to update this when userId added to orders table
-    // return orderRepo.countByUserId(user.getId());
+    return orderRepo.countByUserId(user.getId());
   }
 
   @Override
@@ -133,7 +131,7 @@ public class DashBoardServiceImpl implements DashBoardService {
     }
     // need to update this when userId added to orders table
 
-    return orderRepo.findByDateBetween(start, end).size();
+    return orderRepo.findByDateBetweenByUserId(start, end, user.getId()).size();
   }
 
   @Override
