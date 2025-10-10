@@ -11,7 +11,7 @@ import com.selling.model.User;
 
 public interface OrderRepo extends JpaRepository<Order, Integer> {
   @EntityGraph(attributePaths = { "customer", "orderDetails", "orderDetails.product" })
-  List<Order> findByCustomerUser(User userId);
+  List<Order> findByUser(User userId);
 
   List<Order> findAllByOrderByOrderIdDesc();
 
@@ -31,7 +31,7 @@ public interface OrderRepo extends JpaRepository<Order, Integer> {
   // Find orders between two datetimes (useful for today's orders)
   List<Order> findByDateBetween(LocalDateTime start, LocalDateTime end);
 
-  List<Order> findByDateBetweenByUserId(LocalDateTime start, LocalDateTime end, Long userId);
+  List<Order> findByDateBetweenAndUser_Id(LocalDateTime start, LocalDateTime end, Long userId);
 
   int countByUserId(Long id);
 

@@ -137,7 +137,7 @@ public class OrderServiceImpl implements OrderService {
 
     LocalDate today = LocalDate.now();
     List<Order> userOrders = orderRepo
-        .findByCustomerUser((userDto == null) ? null : mapperService.map(userDto, User.class));
+        .findByUser((userDto == null) ? null : mapperService.map(userDto, User.class));
 
     for (Order order : userOrders) {
       LocalDate orderDate = order.getDate().toLocalDate();
@@ -158,7 +158,7 @@ public class OrderServiceImpl implements OrderService {
   public List<OrderDtoGet> getAllOrderByUserId(UserDto userDto) {
     List<OrderDtoGet> orderDtoGetList = new ArrayList<>();
     List<Order> userOrders = orderRepo
-        .findByCustomerUser((userDto == null) ? null : mapperService.map(userDto, User.class));
+        .findByUser((userDto == null) ? null : mapperService.map(userDto, User.class));
     for (Order order : userOrders) {
       if (order.getCustomer() != null) {
         OrderDtoGet map = mapperService.map(order, OrderDtoGet.class);

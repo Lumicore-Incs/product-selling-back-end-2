@@ -131,7 +131,7 @@ public class DashBoardServiceImpl implements DashBoardService {
     }
     // need to update this when userId added to orders table
 
-    return orderRepo.findByDateBetweenByUserId(start, end, user.getId()).size();
+    return orderRepo.findByDateBetweenAndUser_Id(start, end, user.getId()).size();
   }
 
   @Override
