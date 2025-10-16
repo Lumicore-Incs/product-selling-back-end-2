@@ -5,6 +5,7 @@ import java.util.List;
 import com.selling.dto.CustomerRequestDTO;
 import com.selling.dto.UserDto;
 import com.selling.dto.get.OrderDtoGet;
+import com.selling.model.Product;
 
 public interface OrderService {
   List<OrderDtoGet> getAllTodayOrder();
@@ -23,6 +24,6 @@ public interface OrderService {
 
   Object deleteOrder(Integer orderId);
 
-  // Generate serial number for an order based on product id
-  String generateOrderSerialNumber(Integer productId);
+  // Generate serial number for an order based on product
+  String generateOrderSerialNumber(Product product);
 }

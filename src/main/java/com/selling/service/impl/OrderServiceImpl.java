@@ -59,7 +59,7 @@ public class OrderServiceImpl implements OrderService {
   }
 
   @Override
-  public String generateOrderSerialNumber(Integer productId) {
+  public String generateOrderSerialNumber(Product product) {
     // Global increment: fetch most recent order, parse its numeric suffix,
     // increment
     Order last = orderRepo.findTopByOrderByOrderIdDesc();
@@ -79,9 +79,9 @@ public class OrderServiceImpl implements OrderService {
       }
     }
 
-    String prefix = productPrefix(productId);
+    String prefix = product.getSerialPrefix() != null ? product.getSerialPrefix() : "XXX";
     // format number as 5 digits with leading zeros
-    String numFormatted = String.format("%04d", nextNum);
+    String numFormatted = String.format("%05d", nextNum);
     return prefix + numFormatted;
   }
 
