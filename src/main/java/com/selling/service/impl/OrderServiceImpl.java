@@ -54,8 +54,8 @@ public class OrderServiceImpl implements OrderService {
       return "xxx";
     // map 1->a, 2->b, ... 26->z, then wrap around
     int idx = (productId - 1) % 26;
-    char letter = (char) ('a' + idx);
-    return String.valueOf(letter) + letter + letter;
+    String letter = ("VAC" + idx);
+    return letter;
   }
 
   @Override
@@ -81,7 +81,7 @@ public class OrderServiceImpl implements OrderService {
 
     String prefix = productPrefix(productId);
     // format number as 5 digits with leading zeros
-    String numFormatted = String.format("%05d", nextNum);
+    String numFormatted = String.format("%04d", nextNum);
     return prefix + numFormatted;
   }
 

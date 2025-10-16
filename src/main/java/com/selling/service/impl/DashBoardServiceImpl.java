@@ -142,14 +142,14 @@ public class DashBoardServiceImpl implements DashBoardService {
       return orderRepo.countByStatusAndDateBetween("Deliver", startOfMonth, now);
     }
     return orderRepo.countByCustomerUserEmailAndStatusAndDateBetween(
-        user.getEmail(), "Deliver", startOfMonth, now);
+        user.getEmail(), "DELIVERD", startOfMonth, now);
   }
 
   @Override
   public int getCancelOrder(UserDto user) {
     LocalDateTime now = LocalDateTime.now();
     LocalDateTime startOfMonth = now.withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
-    String cancelStatus = "Failed to Deliver";
+    String cancelStatus = "FAILED TO DELIVERY";
 
     if (user.getRole().equalsIgnoreCase("admin")) {
       return orderRepo.countByStatusAndDateBetween(cancelStatus, startOfMonth, now);
