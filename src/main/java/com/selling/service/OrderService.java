@@ -3,6 +3,7 @@ package com.selling.service;
 import java.util.List;
 
 import com.selling.dto.CustomerRequestDTO;
+import com.selling.dto.TrackingDto;
 import com.selling.dto.UserDto;
 import com.selling.dto.get.OrderDtoGet;
 import com.selling.model.Product;
@@ -26,4 +27,6 @@ public interface OrderService {
 
   // Generate serial number for an order based on product
   String generateOrderSerialNumber(Product product);
+
+  String trackingUpload(List<TrackingDto> trackingList);
 }

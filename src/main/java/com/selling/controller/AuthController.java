@@ -108,7 +108,14 @@ public class AuthController {
   @GetMapping("/get_all_user")
   public ResponseEntity<Object> getAllUser(@RequestHeader(name = "Authorization") String authorizationHeader) {
     if (this.jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
-      List<UserDtoForGet> allUsers = this.userService.getAllUser();
+      UserDto userFromJwtToken = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
+      List<UserDtoForGet> allUsers=null;
+      if (Objects.equals(userFromJwtToken.getRole(), "ADMIN")) {
+        allUsers = this.userService.getAllUser();
+      }else {
+        allUsers = this.userService.getAllUserWithOutAdmin();
+      }
+
       return new ResponseEntity<>(allUsers, HttpStatus.CREATED);
     } else {
       return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);

@@ -110,9 +110,9 @@ public class UserServiceImpl implements UserService {
       return null;
     } else {
       userDto.setId(byId.getId());
-      userDto.setStatus(byId.getStatus());
       userDto.setRegistration_date(byId.getRegistration_date());
       userDto.setProductId(userDto.getProductId());
+      userDto.setPassword(byId.getPassword());
       User user = mapperService.map(userDto, User.class);
       User save = userRepo.save(user);
       return mapperService.map(save, UserDtoForGet.class);
@@ -178,11 +178,6 @@ public class UserServiceImpl implements UserService {
     return otpEntity.getOtpCode().equals(otp);
   }
 
-  @Override
-  public int getCustomerCount() {
-    long count = userRepo.customerCount();
-    return (int) count;
-  }
 
   @Override
   public boolean deleteUser(Integer id) {
@@ -191,6 +186,19 @@ public class UserServiceImpl implements UserService {
     // user.setStatus("DISABLED");
     userRepo.delete(user);
     return true;
+  }
+
+  @Override
+  public List<UserDtoForGet> getAllUserWithOutAdmin() {
+    List<User> all = userRepo.findAll();
+    List<UserDtoForGet> allUsers = new ArrayList<>();
+    for (User user : all) {
+      if (!user.getRole().equals("ADMIN")){
+        UserDtoForGet userDto = mapperService.map(user, UserDtoForGet.class);
+        allUsers.add(userDto);
+      }
+    }
+    return allUsers;
   }
 
   @Override

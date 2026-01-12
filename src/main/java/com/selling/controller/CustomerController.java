@@ -64,7 +64,7 @@ public class CustomerController {
         return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
       }
       UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
-      if (Objects.equals(userDto.getRole(), "admin") || Objects.equals(userDto.getRole(), "ADMIN")) {
+      if (Objects.equals(userDto.getRole(), "SUPER USER") || Objects.equals(userDto.getRole(), "ADMIN")) {
         List<CustomerDtoGet> allCustomer = customerService.getAllCustomer();
         return new ResponseEntity<>(allCustomer, HttpStatus.OK);
       } else {

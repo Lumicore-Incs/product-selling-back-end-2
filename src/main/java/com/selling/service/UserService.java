@@ -27,7 +27,7 @@ public interface UserService {
 
   boolean validateOtp(String email, String otp);
 
-  int getCustomerCount();
-
   boolean deleteUser(Integer id);
+
+    List<UserDtoForGet> getAllUserWithOutAdmin();
 }

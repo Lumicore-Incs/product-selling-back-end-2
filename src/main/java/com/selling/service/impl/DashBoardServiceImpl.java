@@ -35,56 +35,30 @@ public class DashBoardServiceImpl implements DashBoardService {
   @Transactional
   @Override
   public List<ExcelTypeDto> findOrder(String name) {
-    List<ExcelTypeDto> excelTypeDtos = new ArrayList<>();
-    Product byName = productRepo.findByName(name);
-    if (byName == null) {
-      List<Order> pendingOrdersWithQuantities = customerRepo.findPendingOrdersWithQuantities(0);
+    try {
+      List<ExcelTypeDto> excelTypeDtos = new ArrayList<>();
+      Product byName = productRepo.findByName(name);
+      if (byName == null) {
+        List<Order> pendingOrdersWithQuantities = customerRepo.findPendingOrdersWithQuantities(0);
 
-      for (Order order : pendingOrdersWithQuantities) {
-        int size = order.getOrderDetails().size();
+        for (Order order : pendingOrdersWithQuantities) {
+          int size = order.getOrderDetails().size();
 
-        if (size != 1) {
-          StringBuilder qtyDetails = null;
-          for (OrderDetails od : order.getOrderDetails()) {
-            Product product = productRepo.findAllByProductId(od.getProduct().getProductId());
+          if (size != 1) {
+            StringBuilder qtyDetails = null;
+            for (OrderDetails od : order.getOrderDetails()) {
+              Product product = productRepo.findAllByProductId(od.getProduct().getProductId());
 
-            if (qtyDetails == null) {
-              qtyDetails = new StringBuilder();
+              if (qtyDetails == null) {
+                qtyDetails = new StringBuilder();
+              }
+              qtyDetails.append(" + ").append(product.getName()).append(" + ").append(od.getQty());
             }
-            qtyDetails.append(" + ").append(product.getName()).append(" + ").append(od.getQty());
-          }
-
-          Customer customer = order.getCustomer();
-          customer.setStatus("PRINTING");
-          customerRepo.save(customer);
-
-          ExcelTypeDto excelTypeDto = new ExcelTypeDto();
-          excelTypeDto.setId(order.getOrderId());
-          excelTypeDto.setName(customer.getName());
-          excelTypeDto.setAddress(customer.getAddress());
-          excelTypeDto.setContact01(customer.getContact01());
-          excelTypeDto.setContact02(customer.getContact02());
-          excelTypeDto.setQty(String.valueOf(qtyDetails));
-          excelTypeDtos.add(excelTypeDto);
-        }
-      }
-    } else {
-      List<Order> pendingOrdersWithQuantities = customerRepo.findPendingOrdersWithQuantities(byName.getProductId());
-      for (Order order : pendingOrdersWithQuantities) {
-        int size = order.getOrderDetails().size();
-        StringBuilder qtyDetails = null;
-        for (OrderDetails od : order.getOrderDetails()) {
-
-          if (od.getProduct().getProductId().equals(byName.getProductId()) && size == 1) {
-            Product product = productRepo.findAllByProductId(od.getProduct().getProductId());
-            if (qtyDetails == null) {
-              qtyDetails = new StringBuilder();
-            }
-            qtyDetails.append(" + ").append(product.getName()).append(" + ").append(od.getQty());
 
             Customer customer = order.getCustomer();
+            customer.setStatus("PRINTING");
             customerRepo.save(customer);
-            System.out.println(customer.getName());
+
             ExcelTypeDto excelTypeDto = new ExcelTypeDto();
             excelTypeDto.setId(order.getOrderId());
             excelTypeDto.setName(customer.getName());
@@ -95,10 +69,42 @@ public class DashBoardServiceImpl implements DashBoardService {
             excelTypeDtos.add(excelTypeDto);
           }
         }
-      }
-    }
+      } else {
+        List<Order> pendingOrdersWithQuantities = customerRepo.findPendingOrdersWithQuantities(byName.getProductId());
+        for (Order order : pendingOrdersWithQuantities) {
+          int size = order.getOrderDetails().size();
+          StringBuilder qtyDetails = null;
+          for (OrderDetails od : order.getOrderDetails()) {
 
-    return excelTypeDtos;
+            if (od.getProduct().getProductId().equals(byName.getProductId()) && size == 1) {
+              Product product = productRepo.findAllByProductId(od.getProduct().getProductId());
+              if (qtyDetails == null) {
+                qtyDetails = new StringBuilder();
+              }
+              qtyDetails.append(" + ").append(product.getName()).append(" + ").append(od.getQty());
+
+              Customer customer = order.getCustomer();
+              customer.setStatus("PRINTING");
+              customerRepo.save(customer);
+              System.out.println(customer.getName());
+              ExcelTypeDto excelTypeDto = new ExcelTypeDto();
+              excelTypeDto.setId(order.getOrderId());
+              excelTypeDto.setName(customer.getName());
+              excelTypeDto.setAddress(customer.getAddress());
+              excelTypeDto.setContact01(customer.getContact01());
+              excelTypeDto.setContact02(customer.getContact02());
+              excelTypeDto.setQty(String.valueOf(qtyDetails));
+              excelTypeDtos.add(excelTypeDto);
+            }
+          }
+        }
+      }
+
+      return excelTypeDtos;
+    }catch (Exception e) {
+      System.out.println("massage is : " + e.getMessage());
+      return null;
+    }
   }
 
   @Override
@@ -116,7 +122,7 @@ public class DashBoardServiceImpl implements DashBoardService {
 
   @Override
   public int getTotalOrder(UserDto user) {
-    if (user.getRole().equals("admin") || user.getRole().equals("ADMIN") || user.getRole().equals("Admin")) {
+    if (user.getRole().equals("SUPER USER") || user.getRole().equals("ADMIN")) {
       return (int) orderRepo.count();
     }
     return orderRepo.countByUserId(user.getId());
@@ -126,7 +132,7 @@ public class DashBoardServiceImpl implements DashBoardService {
   public int getTodayOrder(UserDto user) {
     LocalDateTime start = LocalDate.now().atStartOfDay();
     LocalDateTime end = start.plusDays(1);
-    if (user.getRole().equals("admin") || user.getRole().equals("ADMIN") || user.getRole().equals("Admin")) {
+    if (user.getRole().equals("SUPER USER") || user.getRole().equals("ADMIN")) {
       return orderRepo.findByDateBetween(start, end).size();
     }
     // need to update this when userId added to orders table
@@ -138,20 +144,20 @@ public class DashBoardServiceImpl implements DashBoardService {
   public int getConformOrder(UserDto user) {
     LocalDateTime now = LocalDateTime.now();
     LocalDateTime startOfMonth = now.withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
-    if (user.getRole().equals("admin") || user.getRole().equals("ADMIN") || user.getRole().equals("Admin")) {
-      return orderRepo.countByStatusAndDateBetween("Deliver", startOfMonth, now);
+    if (user.getRole().equals("SUPER USER") || user.getRole().equals("ADMIN")) {
+      return orderRepo.countByStatusAndDateBetween("RECEIVED AT DESTINATION", startOfMonth, now);
     }
     return orderRepo.countByCustomerUserEmailAndStatusAndDateBetween(
-        user.getEmail(), "DELIVERD", startOfMonth, now);
+        user.getEmail(), "RECEIVED AT DESTINATION", startOfMonth, now);
   }
 
   @Override
   public int getCancelOrder(UserDto user) {
     LocalDateTime now = LocalDateTime.now();
     LocalDateTime startOfMonth = now.withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
-    String cancelStatus = "FAILED TO DELIVERY";
+    String cancelStatus = "FAILED TO DELIVER";
 
-    if (user.getRole().equalsIgnoreCase("admin")) {
+    if (user.getRole().equals("SUPER USER") || user.getRole().equals("ADMIN")) {
       return orderRepo.countByStatusAndDateBetween(cancelStatus, startOfMonth, now);
     } else {
       return orderRepo.countByCustomerUserEmailAndStatusAndDateBetween(

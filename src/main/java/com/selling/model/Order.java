@@ -36,6 +36,8 @@ public class Order {
 
   private BigDecimal totalPrice;
 
+  private String OrderType;
+
   private LocalDateTime date;
 
   private String trackingId;

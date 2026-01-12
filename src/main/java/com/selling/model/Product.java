@@ -28,6 +28,7 @@ public class Product {
   @Column(name = "product_id")
   private Integer productId;
   private String name;
+  private String shortName;
   private BigDecimal price;
   private String status;
   private String serialPrefix;

@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import com.selling.repository.*;
+import com.selling.service.StockService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,10 +22,6 @@ import com.selling.model.Order;
 import com.selling.model.OrderDetails;
 import com.selling.model.Product;
 import com.selling.model.User;
-import com.selling.repository.CustomerRepo;
-import com.selling.repository.OrderDetailsRepo;
-import com.selling.repository.OrderRepo;
-import com.selling.repository.ProductRepo;
 import com.selling.service.CustomerService;
 import com.selling.service.OrderService;
 import com.selling.util.MapperService;
@@ -40,6 +38,7 @@ public class CustomerServiceImpl implements CustomerService {
   private final ProductRepo productRepository;
   private final MapperService mapperService;
   private final OrderService orderService;
+  private final StockService stockService;
 
   @Override
   @Transactional
@@ -131,6 +130,8 @@ public class CustomerServiceImpl implements CustomerService {
           orderDetails.setQty(item.getQty());
           orderDetails.setTotal(item.getTotal());
 
+          stockService.updateStockByName(product.getName(), item.getQty());
+
           return orderDetails;
         })
         .collect(Collectors.toList());
@@ -172,11 +173,20 @@ public class CustomerServiceImpl implements CustomerService {
     return customerDtoGetList;
   }
 
+  @Transactional
   @Override
   public boolean deleteCustomer(Integer id) {
     Optional<Customer> customerOptional = customerRepository.findById(id);
-    customerOptional.ifPresent(customerRepository::delete);
-    return false;
+    if (customerOptional.isPresent()) {
+      Customer customer = customerOptional.get();
+      List<Order> orders = customer.getOrders();
+      Order lastOrder = orders.get(orders.size() - 1);
+      List<OrderDetails> orderDetails = lastOrder.getOrderDetails();
+      orderRepository.deleteById(lastOrder.getOrderId());
+      return true;
+    }else {
+      return false;
+    }
   }
 
   private String generateTrackingId() {

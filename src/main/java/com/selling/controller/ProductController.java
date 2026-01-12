@@ -74,18 +74,6 @@ public class ProductController {
   public ResponseEntity<Object> getAllProducts() {
     try {
       List<ProductDto> products = null;
-      // if (authorizationHeader.equals(null)){
-      // products = productService.getAllProducts();
-      // }else {
-      // UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
-      // if (Objects.equals(userDto.getRole(), "admin") ||
-      // Objects.equals(userDto.getRole(), "ADMIN") ||
-      // Objects.equals(userDto.getRole(), "Admin")) {
-      // products = productService.getAllProducts();
-      // }else {
-      // products = productService.getAllProductsUserWise();
-      // }
-      // }
       products = productService.getAllProducts();
 
       return new ResponseEntity<>(products, HttpStatus.OK);
