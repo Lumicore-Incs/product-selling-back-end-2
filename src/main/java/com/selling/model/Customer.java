@@ -24,9 +24,7 @@ import lombok.ToString;
 @Data
 @ToString
 @Entity
-@Table(name = "customer", indexes = {
-    @jakarta.persistence.Index(name = "idx_customer_canonical_contact", columnList = "canonical_contact")
-})
+@Table(name = "customer")
 public class Customer {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,9 +37,6 @@ public class Customer {
 
   private String contact01;
   private String contact02;
-
-  @Column(name = "canonical_contact", unique = true, nullable = false)
-  private String canonicalContact;
 
   private LocalDateTime date;
 
