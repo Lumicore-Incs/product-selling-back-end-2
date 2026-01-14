@@ -31,6 +31,7 @@ public class ProductServiceImpl implements ProductService {
     product.setPrice(productDTO.getPrice());
     product.setStatus("ACTIVE"); // Default status active
     product.setSerialPrefix(productDTO.getSerialPrefix());
+    product.setShortName(productDTO.getShortName());
 
     productRepository.save(product);
     return entityToDTO(product);
@@ -67,6 +68,7 @@ public class ProductServiceImpl implements ProductService {
       product.setPrice(productDTO.getPrice());
       product.setStatus(productDTO.getStatus());
       product.setSerialPrefix(productDTO.getSerialPrefix());
+      product.setShortName(productDTO.getShortName());
 
       Product updatedProduct = productRepository.save(product);
       return entityToDTO(updatedProduct);

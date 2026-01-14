@@ -15,5 +15,5 @@ public class ExcelTypeDto {
     private String address;
     private String contact01;
     private String contact02;
-    private String qty;
+    private String price;
 }

@@ -65,7 +65,7 @@ public class DashBoardServiceImpl implements DashBoardService {
             excelTypeDto.setAddress(customer.getAddress());
             excelTypeDto.setContact01(customer.getContact01());
             excelTypeDto.setContact02(customer.getContact02());
-            excelTypeDto.setQty(String.valueOf(qtyDetails));
+            excelTypeDto.setPrice(String.valueOf(order.getTotalPrice()));
             excelTypeDtos.add(excelTypeDto);
           }
         }
@@ -86,14 +86,13 @@ public class DashBoardServiceImpl implements DashBoardService {
               Customer customer = order.getCustomer();
               customer.setStatus("PRINTING");
               customerRepo.save(customer);
-              System.out.println(customer.getName());
               ExcelTypeDto excelTypeDto = new ExcelTypeDto();
               excelTypeDto.setId(order.getOrderId());
               excelTypeDto.setName(customer.getName());
               excelTypeDto.setAddress(customer.getAddress());
               excelTypeDto.setContact01(customer.getContact01());
               excelTypeDto.setContact02(customer.getContact02());
-              excelTypeDto.setQty(String.valueOf(qtyDetails));
+              excelTypeDto.setPrice(String.valueOf(order.getTotalPrice()));
               excelTypeDtos.add(excelTypeDto);
             }
           }

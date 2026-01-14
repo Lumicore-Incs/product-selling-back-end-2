@@ -402,10 +402,8 @@ public class OrderServiceImpl implements OrderService {
             Customer customer = order.getCustomer();
 
             if (order.getStatus().equals("PENDING") || order.getStatus().equals("TEMPORARY")) {
-                System.out.println("okzzzzz");
                 List<OrderDetails> details = orderDetailsRepo.findByOrder(order);
                 if (details != null && !details.isEmpty()) {
-                    System.out.println("okxxxxxxxx");
                     orderDetailsRepo.deleteAll(details);
                 }
 
