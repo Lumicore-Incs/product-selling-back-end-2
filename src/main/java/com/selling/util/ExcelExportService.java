@@ -19,7 +19,7 @@ public class ExcelExportService {
 
             // Header row
             Row headerRow = sheet.createRow(0);
-            String[] headers = {"ID", "Name", "Address", "whatsapp No ", "Contact02", "Qty"}; // ඔබේ entity අනුව header වෙනස් කරන්න
+            String[] headers = {"ID", "Name", "Address", "whatsapp No ", "Contact02", "Price"}; // ඔබේ entity අනුව header වෙනස් කරන්න
             for (int i = 0; i < headers.length; i++) {
                 Cell cell = headerRow.createCell(i);
                 cell.setCellValue(headers[i]);
@@ -34,7 +34,7 @@ public class ExcelExportService {
                 row.createCell(2).setCellValue(entity.getAddress());
                 row.createCell(3).setCellValue(entity.getContact01());
                 row.createCell(4).setCellValue(entity.getContact02());
-                row.createCell(5).setCellValue(entity.getQty());
+                row.createCell(5).setCellValue(entity.getPrice());
             }
 
             // Auto-size columns

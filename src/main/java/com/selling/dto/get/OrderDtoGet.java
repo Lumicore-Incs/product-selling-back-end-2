@@ -19,6 +19,7 @@ public class OrderDtoGet {
   private Integer orderId;
   private String serialNo;
   private BigDecimal totalPrice;
+  private String OrderType;
   private LocalDateTime date;
   private String trackingId;
   private String status;

@@ -5,7 +5,6 @@ import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -24,7 +23,6 @@ public class DemoApplication {
   private final UserRepo userRepo;
   private final DashboardController dashboardController;
 
-  @Autowired
   public DemoApplication(UserRepo userRepo, DashboardController dashboardController) {
     this.userRepo = userRepo;
     this.dashboardController = dashboardController;
@@ -47,18 +45,18 @@ public class DemoApplication {
       logger.error("An error occurred during user initialization.", e);
     }
 
-    // new Thread(() -> {
-    // while (true) {
-    // try {
-    // // මිනිත්තු 2කට වරක් print කරන්න
-    // Thread.sleep(120000); // 120000 ms = 2 minutes (fixed from 30 seconds)
-    // System.out.println("Background check - 2 minutes elapsed");
-    // dashboardController.updateOrderDetails();
-    // } catch (InterruptedException e) {
-    // e.printStackTrace();
-    // }
-    // }
-    // }).start();
+     new Thread(() -> {
+     while (true) {
+     try {
+     // මිනිත්තු 2කට වරක් print කරන්න
+     Thread.sleep(30000); // 120000 ms = 2 minutes (fixed from 30 seconds)
+     System.out.println("Background check - 2 minutes elapsed");
+     dashboardController.updateOrderDetails();
+     } catch (InterruptedException e) {
+     e.printStackTrace();
+     }
+     }
+     }).start();
 
   }
 }
