@@ -67,7 +67,6 @@ public class StockServiceImpl implements StockService {
         Optional<Stock> byId = stockRepo.findById(id);
         if (byId.isPresent()) {
             if (byId.get().getQuantity()==byId.get().getTotalQuantity()) {
-                System.out.println("1");
                 stockRepo.deleteById(id);
                 return true;
             }
