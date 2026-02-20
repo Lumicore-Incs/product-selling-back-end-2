@@ -18,6 +18,7 @@ import lombok.ToString;
 public class OrderDtoGet {
   private Integer orderId;
   private String serialNo;
+  private String weyBillId;
   private BigDecimal totalPrice;
   private String OrderType;
   private LocalDateTime date;

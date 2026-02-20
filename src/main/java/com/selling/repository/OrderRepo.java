@@ -15,34 +15,94 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface OrderRepo extends JpaRepository<Order, Integer> {
-  @EntityGraph(attributePaths = { "customer", "orderDetails", "orderDetails.product" })
-  List<Order> findByUser(User userId);
+    @EntityGraph(attributePaths = {"customer", "orderDetails", "orderDetails.product"})
+    List<Order> findByUser(User userId);
 
-  List<Order> findAllByOrderByOrderIdDesc();
+    Order findAllByOrderId(Integer orderId);
 
-  List<Order> findTop200ByOrderByOrderIdDesc();
+    List<Order> findAllByOrderByOrderIdDesc();
 
-  // Get last saved order (most recent) to determine global serial numeric part
-  Order findTopBySerialNoStartingWithOrderBySerialNoDesc(String prefix);
+    List<Order> findTop200ByOrderByOrderIdDesc();
 
+    // Get last saved order (most recent) to determine global serial numeric part
+    Order findTopBySerialNoStartingWithOrderBySerialNoDesc(String prefix);
 
-  int countByStatusAndDateBetween(String deliver, LocalDateTime startOfMonth, LocalDateTime now);
+    // Find orders by status
+    List<Order> findByStatus(String status);
 
-  int countByCustomerUserEmailAndStatusAndDateBetween(String email, String deliver, LocalDateTime startOfMonth,
-      LocalDateTime now);
-
-  // Find orders by status
-  List<Order> findByStatus(String status);
-
-  // Find orders between two datetimes (useful for today's orders)
-  List<Order> findByDateBetween(LocalDateTime start, LocalDateTime end);
-
-  List<Order> findByDateBetweenAndUser_Id(LocalDateTime start, LocalDateTime end, Long userId);
-
-  int countByUserId(Long id);
-
-  // serialNo මගින් Order සොයාගැනීම
-  Optional<Order> findBySerialNo(String serialNo);
+    // serialNo මගින් Order සොයාගැනීම
+    Optional<Order> findBySerialNo(String serialNo);
 
     Order findByCustomer(Customer customer);
+
+    @Query("""
+                SELECT COALESCE(SUM(od.qty), 0)
+                FROM Order o
+                JOIN o.orderDetails od
+                WHERE o.date >= :startDate
+                AND o.user.id = :userId
+            """)
+    Long sumQtyByUserAfterDate(
+            @Param("userId") Long userId,
+            @Param("startDate") LocalDateTime startDate
+    );
+
+    @Query("""
+                SELECT COALESCE(SUM(od.qty), 0)
+                FROM Order o
+                JOIN o.orderDetails od
+                WHERE o.date >= :startDate
+            """)
+    Long sumQtyAfterDate(@Param("startDate") LocalDateTime startDate);
+
+
+    @Query("""
+                SELECT COALESCE(SUM(od.qty), 0)
+                FROM Order o
+                JOIN o.orderDetails od
+                WHERE o.date BETWEEN :start AND :end
+            """)
+    Long sumTodayQty(
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end
+    );
+
+    @Query("""
+    SELECT COALESCE(SUM(od.qty), 0)
+    FROM Order o
+    JOIN o.orderDetails od
+    WHERE o.date BETWEEN :start AND :end
+    AND o.user.id = :userId
+""")
+    Long sumTodayQtyByUser(
+            @Param("userId") Long userId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end
+    );
+
+    @Query("""
+    SELECT COALESCE(SUM(od.qty), 0)
+    FROM Order o
+    JOIN o.orderDetails od
+    WHERE o.status = :status
+    AND o.date >= :start
+""")
+    Long countByStatusAndDateBetween(
+            @Param("status") String status,
+            @Param("start") LocalDateTime startOfMonth
+    );
+
+    @Query("""
+    SELECT COALESCE(SUM(od.qty), 0)
+    FROM Order o
+    JOIN o.orderDetails od
+    WHERE o.status = :status
+    AND o.date >= :start
+    AND o.user.id = :userId
+""")
+    Long countByCustomerUserEmailAndStatusAndDateBetween(
+            @Param("status") String status,
+            @Param("userId") Long userId,
+            @Param("start") LocalDateTime startOfMonth
+    );
 }
