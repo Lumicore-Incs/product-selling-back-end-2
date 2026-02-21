@@ -28,7 +28,15 @@ public interface OrderRepo extends JpaRepository<Order, Integer> {
     Order findTopBySerialNoStartingWithOrderBySerialNoDesc(String prefix);
 
     // Find orders by status
-    List<Order> findByStatus(String status);
+    @Query("""
+                SELECT o
+                FROM Order o
+                JOIN o.orderDetails od
+                JOIN o.customer c
+                WHERE o.status = :status
+                AND c.status = :status
+            """)
+    List<Order> findByStatus(@Param("status") String status);
 
     // serialNo මගින් Order සොයාගැනීම
     Optional<Order> findBySerialNo(String serialNo);
