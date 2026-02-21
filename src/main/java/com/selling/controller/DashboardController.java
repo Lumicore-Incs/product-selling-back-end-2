@@ -11,12 +11,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.selling.dto.UserDto;
 import com.selling.dto.get.ExcelTypeDto;
@@ -70,17 +65,19 @@ public class DashboardController {
     }
   }
 
-  @GetMapping("/conform")
-  public ResponseEntity<Object> ConformExport(@RequestHeader(name = "Authorization") String authorizationHeader) {
+  @PutMapping("/conform")
+  public ResponseEntity<Object> ConformExport(
+          @RequestHeader(name = "Authorization") String authorizationHeader,
+          @RequestBody List<String> serialNumbers) {
     try {
       if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
         return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
       }
-      List<ExcelTypeDto> entities = dashBoardService.ConformOrder();
-      return new ResponseEntity<>(entities, HttpStatus.CREATED);
+      String s = dashBoardService.ConformOrder(serialNumbers);
+      return new ResponseEntity<>(s, HttpStatus.OK);
     } catch (Exception e) {
       return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
-          HttpStatus.INTERNAL_SERVER_ERROR);
+              HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -106,6 +103,21 @@ public class DashboardController {
       }
     } catch (Exception e) {
       return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @GetMapping("/exportData/{name}")
+  public ResponseEntity<Object> getAndExportToOrder(@RequestHeader(name = "Authorization") String authorizationHeader, @PathVariable String name) {
+    try {
+      if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
+        return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
+      }
+      List<ExcelTypeDto> entities = dashBoardService.findOrder(name);
+      return new ResponseEntity<>(entities, HttpStatus.OK);
+
+    } catch (Exception e) {
+      return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
+              HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 

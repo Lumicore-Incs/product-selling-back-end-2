@@ -27,140 +27,196 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class DashBoardServiceImpl implements DashBoardService {
 
-  @Autowired
-  private final CustomerRepo customerRepo;
-  private final OrderRepo orderRepo;
-  private final ProductRepo productRepo;
+    @Autowired
+    private final CustomerRepo customerRepo;
+    private final OrderRepo orderRepo;
+    private final ProductRepo productRepo;
 
-  @Transactional
-  @Override
-  public List<ExcelTypeDto> findOrder(String name) {
-    try {
-      List<ExcelTypeDto> excelTypeDtos = new ArrayList<>();
-      Product byName = productRepo.findByName(name);
-      if (byName == null) {
-        List<Order> pendingOrdersWithQuantities = customerRepo.findPendingOrdersWithQuantities(0);
+    @Transactional
+    @Override
+    public List<ExcelTypeDto> findOrder(String name) {
 
-        for (Order order : pendingOrdersWithQuantities) {
-          int size = order.getOrderDetails().size();
+        try {
+            List<ExcelTypeDto> excelTypeDtos = new ArrayList<>();
 
-          if (size != 1) {
-            StringBuilder qtyDetails = null;
-            for (OrderDetails od : order.getOrderDetails()) {
-              Product product = productRepo.findAllByProductId(od.getProduct().getProductId());
+            List<Order> pendingOrdersWithQuantities = customerRepo.findAllPendingOrdersWithQuantities();
 
-              if (qtyDetails == null) {
-                qtyDetails = new StringBuilder();
-              }
-              qtyDetails.append(" + ").append(product.getName()).append(" + ").append(od.getQty());
+            Long filterProductId = null;
+
+            // If name is not "all", get productId
+            if (!name.equalsIgnoreCase("all")) {
+                Product byName = productRepo.findByName(name);
+                if (byName != null) {
+                    filterProductId = Long.valueOf(byName.getProductId());
+                }
             }
 
-            Customer customer = order.getCustomer();
-            customer.setStatus("PRINTING");
-            customerRepo.save(customer);
+            for (Order order : pendingOrdersWithQuantities) {
 
-            ExcelTypeDto excelTypeDto = new ExcelTypeDto();
-            excelTypeDto.setId(order.getOrderId());
-            excelTypeDto.setName(customer.getName());
-            excelTypeDto.setAddress(customer.getAddress());
-            excelTypeDto.setContact01(customer.getContact01());
-            excelTypeDto.setContact02(customer.getContact02());
-            excelTypeDto.setPrice(String.valueOf(order.getTotalPrice()));
-            excelTypeDtos.add(excelTypeDto);
-          }
-        }
-      } else {
-        List<Order> pendingOrdersWithQuantities = customerRepo.findPendingOrdersWithQuantities(byName.getProductId());
-        for (Order order : pendingOrdersWithQuantities) {
-          int size = order.getOrderDetails().size();
-          StringBuilder qtyDetails = null;
-          for (OrderDetails od : order.getOrderDetails()) {
+                boolean isMatch = false;
+                StringBuilder qtyDetails = new StringBuilder();
 
-            if (od.getProduct().getProductId().equals(byName.getProductId()) && size == 1) {
-              Product product = productRepo.findAllByProductId(od.getProduct().getProductId());
-              if (qtyDetails == null) {
-                qtyDetails = new StringBuilder();
-              }
-              qtyDetails.append(" + ").append(product.getName()).append(" + ").append(od.getQty());
+                for (OrderDetails od : order.getOrderDetails()) {
 
-              Customer customer = order.getCustomer();
-              customer.setStatus("PRINTING");
-              customerRepo.save(customer);
-              ExcelTypeDto excelTypeDto = new ExcelTypeDto();
-              excelTypeDto.setId(order.getOrderId());
-              excelTypeDto.setName(customer.getName());
-              excelTypeDto.setAddress(customer.getAddress());
-              excelTypeDto.setContact01(customer.getContact01());
-              excelTypeDto.setContact02(customer.getContact02());
-              excelTypeDto.setPrice(String.valueOf(order.getTotalPrice()));
-              excelTypeDtos.add(excelTypeDto);
+                    Long orderProductId = Long.valueOf(od.getProduct().getProductId());
+
+                    // If "all", take all orders
+                    if (name.equalsIgnoreCase("all")) {
+                        isMatch = true;
+                    }
+                    // Otherwise match productId
+                    else if (filterProductId != null && filterProductId.equals(orderProductId)) {
+                        isMatch = true;
+                    }
+
+                    if (isMatch) {
+                        qtyDetails.append(" + ")
+                                .append(od.getProduct().getName())
+                                .append(" + ")
+                                .append(od.getQty());
+                    }
+                }
+
+                if (isMatch) {
+                    Customer customer = order.getCustomer();
+
+                    ExcelTypeDto excelTypeDto = new ExcelTypeDto();
+                    excelTypeDto.setId(order.getSerialNo());
+                    excelTypeDto.setName(customer.getName());
+                    excelTypeDto.setAddress(customer.getAddress());
+                    excelTypeDto.setContact01(customer.getContact01());
+                    excelTypeDto.setContact02(customer.getContact02());
+                    excelTypeDto.setPrice(String.valueOf(order.getTotalPrice()));
+                    excelTypeDto.setNote(order.getRemark());
+
+                    excelTypeDtos.add(excelTypeDto);
+                }
             }
-          }
+
+            return excelTypeDtos;
+
+        } catch (Exception e) {
+            System.out.println("message is : " + e.getMessage());
+            return null;
         }
-      }
-
-      return excelTypeDtos;
-    }catch (Exception e) {
-      System.out.println("massage is : " + e.getMessage());
-      return null;
     }
-  }
 
-  @Override
-  public List<ExcelTypeDto> ConformOrder() {
-    List<ExcelTypeDto> pendingOrdersWithQuantities = customerRepo.findPendingOrdersWithQuantities();
-    for (ExcelTypeDto excelTypeDto : pendingOrdersWithQuantities) {
-      Optional<Customer> byId = customerRepo.findById(excelTypeDto.getId());
-      if (byId.isPresent()) {
-        byId.get().setStatus("ACTIVE");
-        customerRepo.save(byId.get());
-      }
+    @Override
+    public String ConformOrder(List<String> serialNumbers) {
+        try {
+           for (String serialNumber : serialNumbers) {
+               Optional<Order> bySerialNo = orderRepo.findBySerialNo(serialNumber);
+               if (bySerialNo.isPresent()) {
+                   bySerialNo.get().getCustomer().setStatus("PRINTING");
+                   customerRepo.save(bySerialNo.get().getCustomer());
+               }
+           }
+        } catch (Exception e) {
+            System.out.println("message is : " + e.getMessage());
+            return null;
+        }
+        return "success";
     }
-    return pendingOrdersWithQuantities;
-  }
 
-  @Override
-  public int getTotalOrder(UserDto user) {
-    if (user.getRole().equals("SUPER USER") || user.getRole().equals("ADMIN")) {
-      return (int) orderRepo.count();
+    @Override
+    public int getTotalOrder(UserDto user) {
+
+        LocalDate today = LocalDate.now();
+
+        LocalDate startDate;
+
+        if (today.getDayOfMonth() >= 15) {
+            // This month 15
+            startDate = LocalDate.of(today.getYear(), today.getMonth(), 15);
+        } else {
+            // Previous month 15
+            LocalDate previousMonth = today.minusMonths(1);
+            startDate = LocalDate.of(previousMonth.getYear(), previousMonth.getMonth(), 15);
+        }
+
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+
+        if (user.getRole().equals("SUPER USER") || user.getRole().equals("ADMIN")) {
+            return Math.toIntExact(orderRepo.sumQtyAfterDate(startDateTime));
+        }
+
+        return Math.toIntExact(orderRepo.sumQtyByUserAfterDate(
+                user.getId(),
+                startDateTime
+        ));
     }
-    return orderRepo.countByUserId(user.getId());
-  }
 
-  @Override
-  public int getTodayOrder(UserDto user) {
-    LocalDateTime start = LocalDate.now().atStartOfDay();
-    LocalDateTime end = start.plusDays(1);
-    if (user.getRole().equals("SUPER USER") || user.getRole().equals("ADMIN")) {
-      return orderRepo.findByDateBetween(start, end).size();
+
+    @Override
+    public int getTodayOrder(UserDto user) {
+
+        LocalDate today = LocalDate.now();
+
+        LocalDateTime start = today.atStartOfDay();
+        LocalDateTime end = today.atTime(23, 59, 59);
+
+        if (user.getRole().equals("SUPER USER") || user.getRole().equals("ADMIN")) {
+            return orderRepo.sumTodayQty(start, end).intValue();
+        }
+
+        return orderRepo.sumTodayQtyByUser(
+                user.getId(),
+                start,
+                end
+        ).intValue();
     }
-    // need to update this when userId added to orders table
 
-    return orderRepo.findByDateBetweenAndUser_Id(start, end, user.getId()).size();
-  }
 
-  @Override
-  public int getConformOrder(UserDto user) {
-    LocalDateTime now = LocalDateTime.now();
-    LocalDateTime startOfMonth = now.withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
-    if (user.getRole().equals("SUPER USER") || user.getRole().equals("ADMIN")) {
-      return orderRepo.countByStatusAndDateBetween("RECEIVED AT DESTINATION", startOfMonth, now);
+    @Override
+    public int getConformOrder(UserDto user) {
+
+        LocalDate today = LocalDate.now();
+
+        LocalDate startDate;
+
+        if (today.getDayOfMonth() >= 15) {
+            // This month 15
+            startDate = LocalDate.of(today.getYear(), today.getMonth(), 15);
+        } else {
+            // Previous month 15
+            LocalDate previousMonth = today.minusMonths(1);
+            startDate = LocalDate.of(previousMonth.getYear(), previousMonth.getMonth(), 15);
+        }
+
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+
+        if (user.getRole().equals("SUPER USER") || user.getRole().equals("ADMIN")) {
+            return Math.toIntExact(orderRepo.countByStatusAndDateBetween("Delivered", startDateTime));
+        }
+
+        return Math.toIntExact(orderRepo.countByCustomerUserEmailAndStatusAndDateBetween(
+                "Delivered", user.getId(), startDateTime));
     }
-    return orderRepo.countByCustomerUserEmailAndStatusAndDateBetween(
-        user.getEmail(), "RECEIVED AT DESTINATION", startOfMonth, now);
-  }
 
-  @Override
-  public int getCancelOrder(UserDto user) {
-    LocalDateTime now = LocalDateTime.now();
-    LocalDateTime startOfMonth = now.withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
-    String cancelStatus = "FAILED TO DELIVER";
+    @Override
+    public int getCancelOrder(UserDto user) {
 
-    if (user.getRole().equals("SUPER USER") || user.getRole().equals("ADMIN")) {
-      return orderRepo.countByStatusAndDateBetween(cancelStatus, startOfMonth, now);
-    } else {
-      return orderRepo.countByCustomerUserEmailAndStatusAndDateBetween(
-          user.getEmail(), cancelStatus, startOfMonth, now);
+        LocalDate today = LocalDate.now();
+        String cancelStatus = "Returned to Client";
+
+        LocalDate startDate;
+
+        if (today.getDayOfMonth() >= 15) {
+            // This month 15
+            startDate = LocalDate.of(today.getYear(), today.getMonth(), 15);
+        } else {
+            // Previous month 15
+            LocalDate previousMonth = today.minusMonths(1);
+            startDate = LocalDate.of(previousMonth.getYear(), previousMonth.getMonth(), 15);
+        }
+
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+
+        if (user.getRole().equals("SUPER USER") || user.getRole().equals("ADMIN")) {
+            return Math.toIntExact(orderRepo.countByStatusAndDateBetween(cancelStatus, startDateTime));
+        }
+
+        return Math.toIntExact(orderRepo.countByCustomerUserEmailAndStatusAndDateBetween(
+                cancelStatus, user.getId(), startDateTime));
     }
-  }
 }

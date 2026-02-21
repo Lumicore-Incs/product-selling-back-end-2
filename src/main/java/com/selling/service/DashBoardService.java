@@ -8,7 +8,7 @@ import java.util.List;
 public interface DashBoardService {
     List<ExcelTypeDto> findOrder(String name);
 
-    List<ExcelTypeDto> ConformOrder();
+    String ConformOrder(List<String> serialNumbers);
 
     int getTotalOrder(UserDto user);
 
