@@ -98,6 +98,11 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+    @Override
+    public ArrayList<String> getUrgentOrders(Long id, String date) {
+        return null;
+    }
+
     private String updateTrackingForOrder(TrackingDto trackingDto) {
         try {
             // serialNo (orderId in DTO) මගින් order එක සොයාගැනීම
@@ -218,16 +223,22 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public void updateOrderDetails() {
-        List<Order> recentOrders = orderRepo.findTop200ByOrderByOrderIdDesc();
+    public void updateOrderDetails(UserDto userDto) {
+        List<Order> recentOrders =null;
+        if (userDto.getRole().equals("ADMIN") || userDto.getRole().equals("admin") || userDto.getRole().equals("super user") || userDto.getRole().equals("SUPER USER")){
+            recentOrders = orderRepo.findAllByOrderByOrderIdDesc();
+        }else {
+            recentOrders = orderRepo.findByUserIdOrderByOrderIdDesc(userDto.getId());
+        }
         for (Order order : recentOrders) {
+            System.out.println("start"+order.getTrackingId());
             if (!(order.getStatus().equals("Delivered") || order.getStatus().equals("Failed to Deliver")
-                    || order.getStatus().equals("NotFound"))) {
+                    || order.getStatus().equals("NotFound")) && !order.getTrackingId().equals("TRK")) {
+                System.out.println("startsssss"+order.getTrackingId());
                 String value = checkTrackingStatus(order.getTrackingId());
                 // Only update if we got a valid status (not null due to API failure)
                 if (value != null && !value.equals(order.getStatus())) {
                     order.setStatus(value);
-                    // sendMassage("0782862763", value);
                     orderRepo.save(order);
                 }
             }
@@ -393,7 +404,6 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public Object deleteOrder(Integer orderId) {
-        System.out.println("pp");
         try {
             Order order = orderRepo.findAllByOrderId(orderId);
 
@@ -402,25 +412,14 @@ public class OrderServiceImpl implements OrderService {
             }
             Customer customer = order.getCustomer();
 
-            System.out.println("customer is : " + customer.getCustomerId());
-
             if (order.getStatus().equals("PENDING") || order.getStatus().equals("TEMPORARY")) {
                 List<OrderDetails> details = orderDetailsRepo.findByOrder(order);
-                System.out.println("2");
-                System.out.println("order id is" + order.getOrderId());
                 if (details != null && !details.isEmpty()) {
                     System.out.println("delete");
                     orderDetailsRepo.deleteAll(details);
                 }
-                System.out.println("ddd");
                 orderRepo.delete(order);
-                System.out.println("ppp");
                 stockService.updateStockQty(details);
-
-//                Order customerOtherOrder = orderRepo.findByCustomer(order.getCustomer());
-//                if (customerOtherOrder == null) {
-//                    customerRepo.delete(customer);
-//                }
 
                 return success("Order deleted successfully", null);
             }

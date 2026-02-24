@@ -1,5 +1,6 @@
 package com.selling.service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.selling.dto.CustomerRequestDTO;
@@ -19,7 +20,7 @@ public interface OrderService {
 
   List<OrderDtoGet> getTemporaryOrders(UserDto dto);
 
-  void updateOrderDetails();
+  void updateOrderDetails(UserDto userDto);
 
   Object resolveDuplicateOrder(Integer orderId, String userRole, CustomerRequestDTO requestDTO);
 
@@ -29,4 +30,7 @@ public interface OrderService {
   String generateOrderSerialNumber(Product product, UserDto userDto);
 
   String trackingUpload(List<TrackingDto> trackingList);
+
+  ArrayList<String> getUrgentOrders(Long id, String date);
+
 }

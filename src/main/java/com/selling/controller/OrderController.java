@@ -1,9 +1,11 @@
 package com.selling.controller;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 import com.selling.dto.TrackingDto;
+import com.selling.dto.get.GetUserDetailsDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -148,6 +150,26 @@ public class OrderController {
             return new ResponseEntity<>(result, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/getUrgentOrders")
+    public ResponseEntity<Object> getUrgentOrders(
+            @RequestHeader(name = "Authorization") String authorizationHeader,
+            @RequestParam Long id,
+            @RequestParam String date) {
+
+        try {
+            if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
+                return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
+            }
+
+            ArrayList<String> orders = orderService.getUrgentOrders(id, date);
+            return new ResponseEntity<>(orders, HttpStatus.OK);
+
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error retrieving orders: " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

@@ -6,6 +6,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import com.selling.dto.OrderDto;
+import com.selling.dto.get.GetUserDetailsDto;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +34,8 @@ public class DashBoardServiceImpl implements DashBoardService {
     private final CustomerRepo customerRepo;
     private final OrderRepo orderRepo;
     private final ProductRepo productRepo;
+    @Autowired
+    private ModelMapper modelMapper;
 
     @Transactional
     @Override
@@ -218,5 +223,19 @@ public class DashBoardServiceImpl implements DashBoardService {
 
         return Math.toIntExact(orderRepo.countByCustomerUserEmailAndStatusAndDateBetween(
                 cancelStatus, user.getId(), startDateTime));
+    }
+
+    @Override
+    public GetUserDetailsDto getUserDetails(Long id) {
+        List<Order> byUserId = orderRepo.findByUserId(id);
+        System.out.println(byUserId.size());
+        GetUserDetailsDto getUserDetailsDto = new GetUserDetailsDto();
+        List<OrderDto> allData = new ArrayList<>();
+        for (Order order:byUserId){
+            allData.add(modelMapper.map(order, OrderDto.class));
+        }
+        getUserDetailsDto.setOrder(allData);
+        //add income---------------------------------------------------
+        return getUserDetailsDto;
     }
 }
