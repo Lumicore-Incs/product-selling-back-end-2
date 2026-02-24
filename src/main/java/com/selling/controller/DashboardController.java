@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.selling.dto.get.GetUserDetailsDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
@@ -37,7 +38,13 @@ public class DashboardController {
   private final JWTTokenGenerator jwtTokenGenerator;
 
   public void updateOrderDetails() {
-    orderService.updateOrderDetails();
+//    orderService.updateOrderDetails();
+  }
+
+  @GetMapping("/updateTrackingStatus")
+  public void updateTrackingStatus(@RequestHeader(name = "Authorization") String authorizationHeader) {
+    UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
+    orderService.updateOrderDetails(userDto);
   }
 
   @GetMapping("/excel/{name}")
@@ -121,4 +128,19 @@ public class DashboardController {
     }
   }
 
+  @GetMapping("/getUserDetails/{id}")
+  public ResponseEntity<Object> getUserDetails(@RequestHeader(name = "Authorization") String authorizationHeader, @PathVariable Long id) {
+    try {
+      System.out.println("plll");
+      if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
+        return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
+      }
+      GetUserDetailsDto entities = dashBoardService.getUserDetails(id);
+      return new ResponseEntity<>(entities, HttpStatus.OK);
+
+    } catch (Exception e) {
+      return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
+              HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
 }

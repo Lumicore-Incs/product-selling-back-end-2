@@ -111,7 +111,7 @@ public class CustomerServiceImpl implements CustomerService {
       order.setStatus("TEMPORARY");
     }
     order.setRemark(requestDTO.getRemark());
-    order.setTrackingId(generateTrackingId());
+    order.setTrackingId("TRK");
     order.setTotalPrice(requestDTO.getTotalPrice());
 
     // generate serial based on product of first item (global increment)

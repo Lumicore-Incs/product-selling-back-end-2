@@ -10,7 +10,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.selling.model.Order;
 import com.selling.model.User;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -20,7 +19,7 @@ public interface OrderRepo extends JpaRepository<Order, Integer> {
 
     Order findAllByOrderId(Integer orderId);
 
-    List<Order> findAllByOrderByOrderIdDesc();
+    List<Order> findByUserIdOrderByOrderIdDesc(Long userId);
 
     List<Order> findTop200ByOrderByOrderIdDesc();
 
@@ -113,4 +112,16 @@ public interface OrderRepo extends JpaRepository<Order, Integer> {
             @Param("userId") Long userId,
             @Param("start") LocalDateTime startOfMonth
     );
+
+    @Query("""
+    SELECT o
+    FROM Order o
+    JOIN o.orderDetails od
+    WHERE o.user.id = :userId
+""")
+    List<Order> findByUserId(@Param("userId") Long userId);
+
+
+    List<Order> findAllByOrderByOrderIdDesc();
+
 }
