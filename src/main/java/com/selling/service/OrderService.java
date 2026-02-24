@@ -3,6 +3,8 @@ package com.selling.service;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+
 import com.selling.dto.CustomerRequestDTO;
 import com.selling.dto.TrackingDto;
 import com.selling.dto.UserDto;
@@ -17,6 +19,10 @@ public interface OrderService {
   List<OrderDtoGet> getAllOrder();
 
   List<OrderDtoGet> getAllOrderByUserId(UserDto userDto);
+
+  Page<OrderDtoGet> getAllOrderPaginated(int page, int size, String status, String search);
+
+  Page<OrderDtoGet> getAllOrderByUserIdPaginated(UserDto userDto, int page, int size, String status, String search);
 
   List<OrderDtoGet> getTemporaryOrders(UserDto dto);
 
