@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import com.selling.controller.DashboardController;
@@ -16,6 +17,7 @@ import com.selling.repository.UserRepo;
 import jakarta.annotation.PostConstruct;
 
 @SpringBootApplication
+@EnableAsync
 public class DemoApplication {
 
   private static final Logger logger = LoggerFactory.getLogger(DemoApplication.class);

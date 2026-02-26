@@ -10,6 +10,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import com.selling.dto.*;
@@ -224,25 +226,34 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public void updateOrderDetails(UserDto userDto) {
-        List<Order> recentOrders =null;
+        List<Order> recentOrders = null;
         if (userDto.getRole().equals("ADMIN") || userDto.getRole().equals("admin") || userDto.getRole().equals("super user") || userDto.getRole().equals("SUPER USER")){
             recentOrders = orderRepo.findAllByOrderByOrderIdDesc();
-        }else {
+        } else {
             recentOrders = orderRepo.findByUserIdOrderByOrderIdDesc(userDto.getId());
         }
-        for (Order order : recentOrders) {
-            System.out.println("start"+order.getTrackingId());
-            if (!(order.getStatus().equals("Delivered") || order.getStatus().equals("Failed to Deliver")
-                    || order.getStatus().equals("NotFound")) && !order.getTrackingId().equals("TRK")) {
-                System.out.println("startsssss"+order.getTrackingId());
-                String value = checkTrackingStatus(order.getTrackingId());
-                // Only update if we got a valid status (not null due to API failure)
-                if (value != null && !value.equals(order.getStatus())) {
-                    order.setStatus(value);
-                    orderRepo.save(order);
-                }
-            }
-        }
+
+        // Process up to 5 orders in parallel
+        List<CompletableFuture<Void>> futures = recentOrders.stream()
+                .filter(order -> !(order.getStatus().equals("Delivered") || order.getStatus().equals("Failed to Deliver") || order.getStatus().equals("NotFound"))
+                        && !order.getTrackingId().equals("TRK"))
+                .map(order -> CompletableFuture.runAsync(() -> {
+                    String value = checkTrackingStatus(order.getTrackingId());
+                    if (value != null && !value.equals(order.getStatus())) {
+                        order.setStatus(value);
+                        orderRepo.save(order);
+                    }
+                }))
+                .collect(Collectors.toList());
+
+        // Wait for all to complete (with timeout)
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                .orTimeout(5, TimeUnit.MINUTES) // 5 minute timeout for all
+                .exceptionally(ex -> {
+                    System.err.println("Error updating tracking status: " + ex.getMessage());
+                    return null;
+                })
+                .join();
     }
 
     private String checkTrackingStatus(String id) {

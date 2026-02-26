@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 
 import com.selling.dto.UserDto;
@@ -42,9 +43,29 @@ public class DashboardController {
   }
 
   @GetMapping("/updateTrackingStatus")
-  public void updateTrackingStatus(@RequestHeader(name = "Authorization") String authorizationHeader) {
-    UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
-    orderService.updateOrderDetails(userDto);
+  public ResponseEntity<Object> updateTrackingStatus(@RequestHeader(name = "Authorization") String authorizationHeader) {
+    try {
+      if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
+        return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
+      }
+      UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
+      // Execute in background
+      updateOrderDetailsAsync(userDto);
+      return new ResponseEntity<>("Tracking status update initiated in background", HttpStatus.OK);
+    } catch (Exception e) {
+      return new ResponseEntity<>("Error initiating tracking status update: " + e.getMessage(),
+          HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @Async
+  private void updateOrderDetailsAsync(UserDto userDto) {
+    try {
+      orderService.updateOrderDetails(userDto);
+    } catch (Exception e) {
+      System.err.println("Error updating tracking status in background: " + e.getMessage());
+      e.printStackTrace();
+    }
   }
 
   @GetMapping("/excel/{name}")
