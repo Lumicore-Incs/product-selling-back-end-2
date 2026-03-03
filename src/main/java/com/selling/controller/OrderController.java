@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import com.selling.dto.TrackingDto;
+import com.selling.dto.*;
 import com.selling.dto.get.GetUserDetailsDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -12,9 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.selling.dto.ApiResponse;
-import com.selling.dto.CustomerRequestDTO;
-import com.selling.dto.UserDto;
 import com.selling.dto.get.OrderDtoGet;
 import com.selling.service.OrderService;
 import com.selling.util.JWTTokenGenerator;
@@ -78,7 +75,12 @@ public class OrderController {
     }
 
     @GetMapping("/allCustomer")
-    public ResponseEntity<Object> getAllCustomer(@RequestHeader(name = "Authorization") String authorizationHeader) {
+    public ResponseEntity<Object> getAllCustomer(@RequestHeader(name = "Authorization") String authorizationHeader,
+                                                  @RequestParam(defaultValue = "0") int page,
+                                                  @RequestParam(defaultValue = "10") int size,
+                                                  @RequestParam(required = false) String search,
+                                                  @RequestParam(defaultValue = "NAME") String searchField,
+                                                  @RequestParam(required = false) String status) {
         try {
             if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
                 return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
@@ -86,8 +88,8 @@ public class OrderController {
             UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
             if (Objects.equals(userDto.getRole(), "SUPER USER") || Objects.equals(userDto.getRole(), "ADMIN")) {
 
-                List<OrderDtoGet> allCustomer = orderService.getAllOrder();
-                return new ResponseEntity<>(allCustomer, HttpStatus.OK);
+                PaginationResponse<OrderDtoGet> response = orderService.getAllOrderPaginated(page, size, search, searchField, status);
+                return new ResponseEntity<>(response, HttpStatus.OK);
             } else {
 
                 List<OrderDtoGet> allCustomer = orderService.getAllOrderByUserId(userDto);

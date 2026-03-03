@@ -40,7 +40,6 @@ public class DashBoardServiceImpl implements DashBoardService {
     @Autowired
     private ModelMapper modelMapper;
 
-    @Transactional
     @Override
     public List<ExcelTypeDto> findOrder(String name) {
 
@@ -109,6 +108,7 @@ public class DashBoardServiceImpl implements DashBoardService {
         }
     }
 
+    @Transactional
     @Override
     public String ConformOrder(List<String> serialNumbers) {
         try {
@@ -149,16 +149,10 @@ public class DashBoardServiceImpl implements DashBoardService {
                                for (DailyCountDetails existingDetail : existingDetails) {
                                    // Update existing record
                                    if (Objects.equals(existingDetail.getCategory(), qty)){
-                                       System.out.println("ok");
-                                       System.out.println(existingDetail.getQty()+" -- "+qty);
-                                       System.out.println("----------");
                                        existingDetail.setQty(existingDetail.getQty() + qty);
                                        dailyCountDetailsRepo.save(existingDetail);
                                        break;
                                    }else {
-                                       System.out.println("no");
-                                       System.out.println(existingDetail.getQty()+" -- "+qty);
-                                       System.out.println("----------");
                                        DailyCountDetails newDetails = new DailyCountDetails();
                                        newDetails.setProductId(existingDetail.getProductId());
                                        newDetails.setProductName(existingDetail.getProductName());
@@ -167,6 +161,7 @@ public class DashBoardServiceImpl implements DashBoardService {
                                        newDetails.setDailyCount(dailyCount);
                                        newDetails.setProduct(product);
                                        dailyCountDetailsRepo.save(newDetails);
+                                       break;
                                    }
                                }
                            } else {

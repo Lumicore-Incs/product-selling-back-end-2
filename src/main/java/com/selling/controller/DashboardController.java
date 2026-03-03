@@ -59,7 +59,7 @@ public class DashboardController {
   }
 
   @Async
-  private void updateOrderDetailsAsync(UserDto userDto) {
+   void updateOrderDetailsAsync(UserDto userDto) {
     try {
       orderService.updateOrderDetails(userDto);
     } catch (Exception e) {
@@ -101,13 +101,24 @@ public class DashboardController {
       if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
         return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
       }
-      String s = dashBoardService.ConformOrder(serialNumbers);
-      return new ResponseEntity<>(s, HttpStatus.OK);
+
+        ConformOrderAsync(serialNumbers);
+      return new ResponseEntity<>("success", HttpStatus.OK);
     } catch (Exception e) {
       return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
               HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+
+    @Async
+    void ConformOrderAsync(List<String> serialNumbers) {
+        try {
+            dashBoardService.ConformOrder(serialNumbers);
+        } catch (Exception e) {
+            System.err.println("Error updating tracking status in background: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 
   @GetMapping()
   public ResponseEntity<Object> getAllDetails(@RequestHeader(name = "Authorization") String authorizationHeader) {

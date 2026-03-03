@@ -2,10 +2,6 @@ package com.selling.service.impl;
 
 import static com.selling.dto.ApiResponse.success;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,8 +16,10 @@ import com.selling.repository.CustomerRepo;
 import com.selling.service.StockService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.google.gson.JsonArray;
@@ -46,6 +44,7 @@ public class OrderServiceImpl implements OrderService {
     private final ProductRepo productRepository;
     private final StockService stockService;
     private final CustomerRepo customerRepo;
+    private final RestTemplate restTemplate;
 
 
     @Override
@@ -225,6 +224,87 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    public PaginationResponse<OrderDtoGet> getAllOrderPaginated(int page, int size, String search, String searchField, String status) {
+        try {
+            List<Order> allOrders = orderRepo.findAll();
+            
+            // Filter by search criteria
+            List<Order> filteredOrders = allOrders.stream()
+                    .filter(order -> {
+                        // Filter by status if provided
+                        if (status != null && !status.isEmpty() && !status.equals("ALL STATUS")) {
+                            if (!order.getStatus().equalsIgnoreCase(status)) {
+                                return false;
+                            }
+                        }
+                        
+                        // Filter by search field and search term
+                        if (search != null && !search.isEmpty()) {
+                            if (searchField == null || searchField.isEmpty() || searchField.equals("NAME")) {
+                                if (order.getCustomer() != null && order.getCustomer().getName() != null) {
+                                    if (!order.getCustomer().getName().toLowerCase().contains(search.toLowerCase())) {
+                                        return false;
+                                    }
+                                }
+                            } else if (searchField.equals("WAYBILL")) {
+                                if (order.getWeyBillId() == null || !order.getWeyBillId().contains(search)) {
+                                    return false;
+                                }
+                            } else if (searchField.equals("CONTACT")) {
+                                if (order.getCustomer() != null) {
+                                    String contact1 = order.getCustomer().getContact01();
+                                    String contact2 = order.getCustomer().getContact02();
+                                    boolean matchesContact = (contact1 != null && contact1.contains(search)) ||
+                                            (contact2 != null && contact2.contains(search));
+                                    if (!matchesContact) {
+                                        return false;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        return order.getCustomer() != null;
+                    })
+                    .collect(Collectors.toList());
+            
+            long totalElements = filteredOrders.size();
+            int totalPages = (int) Math.ceil((double) totalElements / size);
+            
+            // Validate page number
+            if (page < 0) page = 0;
+            if (page >= totalPages && totalElements > 0) page = totalPages - 1;
+            
+            int startIndex = Math.max(0, page * size);
+            int endIndex = Math.min(startIndex + size, (int) totalElements);
+            
+            // Get paginated content
+            List<OrderDtoGet> content = filteredOrders.subList(startIndex, endIndex).stream()
+                    .map(order -> {
+                        OrderDtoGet map = mapperService.map(order, OrderDtoGet.class);
+                        map.setCustomer(mapperService.map(order.getCustomer(), CustomerDto.class));
+                        map.setOrderDetails(getOrderDetailsData(order));
+                        return map;
+                    })
+                    .collect(Collectors.toList());
+            
+            // Build response
+            PaginationResponse<OrderDtoGet> response = new PaginationResponse<>();
+            response.setContent(content);
+            response.setPageNumber(page);
+            response.setPageSize(size);
+            response.setTotalElements(totalElements);
+            response.setTotalPages(totalPages);
+            response.setLastPage(page == totalPages - 1 || totalElements == 0);
+            
+            return response;
+        } catch (Exception e) {
+            System.out.println("Error fetching paginated orders: " + e.getMessage());
+            throw new RuntimeException("Error fetching paginated orders", e);
+        }
+    }
+
+    @Async
+    @Override
     public void updateOrderDetails(UserDto userDto) {
         List<Order> recentOrders = null;
         if (userDto.getRole().equals("ADMIN") || userDto.getRole().equals("admin") || userDto.getRole().equals("super user") || userDto.getRole().equals("SUPER USER")){
@@ -258,61 +338,39 @@ public class OrderServiceImpl implements OrderService {
 
     private String checkTrackingStatus(String id) {
         String apiUrl = "https://api.transexpress.lk/api/v1/tracking?waybill_id=" + id;
-        HttpURLConnection connection = null;
 
         try {
-            URL url = new URL(apiUrl);
-            connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("GET");
-            connection.setRequestProperty("Accept", "application/json");
+            String response = restTemplate.getForObject(apiUrl, String.class);
+            JsonObject jsonResponse = JsonParser.parseString(response).getAsJsonObject();
 
-            int responseCode = connection.getResponseCode();
+            JsonArray dataArray = jsonResponse.getAsJsonArray("data");
+            String lastStatus = null;
 
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-                BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-                JsonObject jsonResponse = JsonParser.parseReader(in).getAsJsonObject();
-                in.close();
+            for (int i = 0; i < dataArray.size(); i++) {
+                JsonObject dataItem = dataArray.get(i).getAsJsonObject();
+                if ("tracking_history".equals(dataItem.get("key").getAsString())) {
+                    JsonArray historyArray = dataItem.getAsJsonArray("value");
 
-                JsonArray dataArray = jsonResponse.getAsJsonArray("data");
-                String lastStatus = null;
-
-                for (int i = 0; i < dataArray.size(); i++) {
-                    JsonObject dataItem = dataArray.get(i).getAsJsonObject();
-                    if ("tracking_history".equals(dataItem.get("key").getAsString())) {
-                        JsonArray historyArray = dataItem.getAsJsonArray("value");
-
-                        if (historyArray.size() > 0) {
-                            JsonObject lastStatusItem = historyArray.get(historyArray.size() - 1).getAsJsonObject();
-                            lastStatus = lastStatusItem.get("status_name").getAsString();
-                        }
-                        break;
+                    if (historyArray.size() > 0) {
+                        JsonObject lastStatusItem = historyArray.get(historyArray.size() - 1).getAsJsonObject();
+                        lastStatus = lastStatusItem.get("status_name").getAsString();
                     }
+                    break;
                 }
+            }
 
-                if (lastStatus != null) {
-                    return lastStatus;
-                } else {
-                    // Don't return "NotFound" - preserve existing status when API has no data
-                    System.out.println("No tracking history found for ID: " + id);
-                    return null; // Return null to indicate "no update needed"
-                }
+            if (lastStatus != null) {
+                return lastStatus;
             } else {
-                System.out.println("API request failed with response code: " + responseCode + " for tracking ID: " + id);
-                return null; // Don't update status on API failure
+                // Don't return "NotFound" - preserve existing status when API has no data
+                System.out.println("No tracking history found for ID: " + id);
+                return null; // Return null to indicate "no update needed"
             }
 
         } catch (Exception e) {
             e.printStackTrace();
             System.out.println("Error while calling API for tracking ID " + id + ": " + e.getMessage());
             return null; // Don't update status on API exception
-        } finally {
-            // Clean up connection if it was created
-            if (connection != null) {
-                try {
-                    connection.disconnect();
-                } catch (Exception ignored) {
-                }
-            }
         }
     }
 

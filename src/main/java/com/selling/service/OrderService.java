@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.selling.dto.CustomerRequestDTO;
+import com.selling.dto.PaginationResponse;
 import com.selling.dto.TrackingDto;
 import com.selling.dto.UserDto;
 import com.selling.dto.get.OrderDtoGet;
@@ -17,6 +18,8 @@ public interface OrderService {
   List<OrderDtoGet> getAllOrder();
 
   List<OrderDtoGet> getAllOrderByUserId(UserDto userDto);
+
+  PaginationResponse<OrderDtoGet> getAllOrderPaginated(int page, int size, String search, String searchField, String status);
 
   List<OrderDtoGet> getTemporaryOrders(UserDto dto);
 
