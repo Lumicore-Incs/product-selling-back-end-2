@@ -224,79 +224,114 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public PaginationResponse<OrderDtoGet> getAllOrderPaginated(int page, int size, String search, String searchField, String status) {
+    public PaginationResponse<OrderDtoGet> getAllTodayOrderPaginated(int page, int size, String search, String status, Integer productId) {
+        List<Order> allOrders = orderRepo.findAll();
+        return buildFilteredPaginatedResponse(allOrders, page, size, search, status, productId, true, null);
+    }
+
+    @Override
+    public PaginationResponse<OrderDtoGet> getAllTodayOrderByUserIdPaginated(UserDto userDto, int page, int size, String search, String status, Integer productId) {
+        List<Order> userOrders = orderRepo.findByUser(mapperService.map(userDto, User.class));
+        return buildFilteredPaginatedResponse(userOrders, page, size, search, status, productId, true, null);
+    }
+
+    @Override
+    public PaginationResponse<OrderDtoGet> getAllOrderPaginated(int page, int size, String search, String status, Integer productId) {
+        List<Order> allOrders = orderRepo.findAll();
+        return buildFilteredPaginatedResponse(allOrders, page, size, search, status, productId, false, null);
+    }
+
+    @Override
+    public PaginationResponse<OrderDtoGet> getAllOrderByUserIdPaginated(UserDto userDto, int page, int size, String search, String status, Integer productId) {
+        List<Order> userOrders = orderRepo.findByUser(mapperService.map(userDto, User.class));
+        return buildFilteredPaginatedResponse(userOrders, page, size, search, status, productId, false, null);
+    }
+
+    /**
+     * Shared helper: filter + paginate a list of Order entities.
+     *
+     * @param source    raw list of orders to filter
+     * @param page      zero-based page number
+     * @param size      page size
+     * @param search    LIKE match against customerName, weyBillId, contact01, contact02
+     * @param status    exact match on order status (null → no filter)
+     * @param productId filter orders containing at least one detail for this product (null → no filter)
+     * @param todayOnly if true, restrict to orders whose date is today
+     * @param ignored   reserved (pass null)
+     */
+    private PaginationResponse<OrderDtoGet> buildFilteredPaginatedResponse(
+            List<Order> source, int page, int size,
+            String search, String status, Integer productId,
+            boolean todayOnly, Object ignored) {
         try {
-            List<Order> allOrders = orderRepo.findAll();
-            
-            // Filter by search criteria
-            List<Order> filteredOrders = allOrders.stream()
+            // Resolve order IDs that contain the requested product (single DB call)
+            final java.util.Set<Integer> productOrderIds;
+            if (productId != null) {
+                productOrderIds = new java.util.HashSet<>(orderRepo.findOrderIdsByProductId(productId));
+            } else {
+                productOrderIds = null;
+            }
+
+            LocalDate today = LocalDate.now();
+            String searchLower = (search != null && !search.isEmpty()) ? search.toLowerCase() : null;
+            String statusFilter = (status != null && !status.isEmpty() && !status.equals("ALL STATUS")) ? status : null;
+
+            List<Order> filtered = source.stream()
                     .filter(order -> {
-                        // Filter by status if provided
-                        if (status != null && !status.isEmpty() && !status.equals("ALL STATUS")) {
-                            if (!order.getStatus().equalsIgnoreCase(status)) {
+                        if (order.getCustomer() == null) return false;
+
+                        // Today-only restriction
+                        if (todayOnly && !order.getDate().toLocalDate().equals(today)) return false;
+
+                        // Exact status match
+                        if (statusFilter != null && !statusFilter.equals(order.getStatus())) return false;
+
+                        // productId: must appear in at least one order detail
+                        if (productOrderIds != null && !productOrderIds.contains(order.getOrderId())) return false;
+
+                        // Multi-field search: customerName, weyBillId, contact01, contact02
+                        if (searchLower != null) {
+                            String name     = order.getCustomer().getName() != null ? order.getCustomer().getName().toLowerCase() : "";
+                            String waybill  = order.getWeyBillId() != null ? order.getWeyBillId().toLowerCase() : "";
+                            String contact1 = order.getCustomer().getContact01() != null ? order.getCustomer().getContact01().toLowerCase() : "";
+                            String contact2 = order.getCustomer().getContact02() != null ? order.getCustomer().getContact02().toLowerCase() : "";
+                            if (!name.contains(searchLower) && !waybill.contains(searchLower)
+                                    && !contact1.contains(searchLower) && !contact2.contains(searchLower)) {
                                 return false;
                             }
                         }
-                        
-                        // Filter by search field and search term
-                        if (search != null && !search.isEmpty()) {
-                            if (searchField == null || searchField.isEmpty() || searchField.equals("NAME")) {
-                                if (order.getCustomer() != null && order.getCustomer().getName() != null) {
-                                    if (!order.getCustomer().getName().toLowerCase().contains(search.toLowerCase())) {
-                                        return false;
-                                    }
-                                }
-                            } else if (searchField.equals("WAYBILL")) {
-                                if (order.getWeyBillId() == null || !order.getWeyBillId().contains(search)) {
-                                    return false;
-                                }
-                            } else if (searchField.equals("CONTACT")) {
-                                if (order.getCustomer() != null) {
-                                    String contact1 = order.getCustomer().getContact01();
-                                    String contact2 = order.getCustomer().getContact02();
-                                    boolean matchesContact = (contact1 != null && contact1.contains(search)) ||
-                                            (contact2 != null && contact2.contains(search));
-                                    if (!matchesContact) {
-                                        return false;
-                                    }
-                                }
-                            }
-                        }
-                        
-                        return order.getCustomer() != null;
+
+                        return true;
                     })
                     .collect(Collectors.toList());
-            
-            long totalElements = filteredOrders.size();
-            int totalPages = (int) Math.ceil((double) totalElements / size);
-            
-            // Validate page number
+
+            long totalElements = filtered.size();
+            int totalPages = (totalElements == 0) ? 0 : (int) Math.ceil((double) totalElements / size);
+
             if (page < 0) page = 0;
-            if (page >= totalPages && totalElements > 0) page = totalPages - 1;
-            
-            int startIndex = Math.max(0, page * size);
-            int endIndex = Math.min(startIndex + size, (int) totalElements);
-            
-            // Get paginated content
-            List<OrderDtoGet> content = filteredOrders.subList(startIndex, endIndex).stream()
+            if (totalElements > 0 && page >= totalPages) page = totalPages - 1;
+
+            int startIndex = page * size;
+            int endIndex = (int) Math.min((long) startIndex + size, totalElements);
+
+            List<OrderDtoGet> content = filtered.subList(startIndex, endIndex).stream()
                     .map(order -> {
-                        OrderDtoGet map = mapperService.map(order, OrderDtoGet.class);
-                        map.setCustomer(mapperService.map(order.getCustomer(), CustomerDto.class));
-                        map.setOrderDetails(getOrderDetailsData(order));
-                        return map;
+                        OrderDtoGet dto = mapperService.map(order, OrderDtoGet.class);
+                        dto.setCustomer(mapperService.map(order.getCustomer(), CustomerDto.class));
+                        dto.setOrderDetails(getOrderDetailsData(order));
+                        return dto;
                     })
                     .collect(Collectors.toList());
-            
-            // Build response
+
             PaginationResponse<OrderDtoGet> response = new PaginationResponse<>();
             response.setContent(content);
             response.setPageNumber(page);
             response.setPageSize(size);
             response.setTotalElements(totalElements);
             response.setTotalPages(totalPages);
-            response.setLastPage(page == totalPages - 1 || totalElements == 0);
-            
+            response.setLastPage(totalElements == 0 || page == totalPages - 1);
             return response;
+
         } catch (Exception e) {
             System.out.println("Error fetching paginated orders: " + e.getMessage());
             throw new RuntimeException("Error fetching paginated orders", e);

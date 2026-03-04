@@ -32,7 +32,13 @@ public class OrderController {
     private final OrderService orderService;
 
     @GetMapping
-    public ResponseEntity<Object> getAllTodayCustomer(@RequestHeader(name = "Authorization") String authorizationHeader) {
+    public ResponseEntity<Object> getAllTodayCustomer(
+            @RequestHeader(name = "Authorization") String authorizationHeader,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Integer productId) {
         try {
             if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
                 return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
@@ -40,16 +46,14 @@ public class OrderController {
             UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
             System.out.println(userDto.getRole());
             if (Objects.equals(userDto.getRole(), "SUPER USER") || Objects.equals(userDto.getRole(), "ADMIN")) {
-
-                List<OrderDtoGet> allCustomer = orderService.getAllTodayOrder();
-                return new ResponseEntity<>(allCustomer, HttpStatus.OK);
+                PaginationResponse<OrderDtoGet> response = orderService.getAllTodayOrderPaginated(page, size, search, status, productId);
+                return new ResponseEntity<>(response, HttpStatus.OK);
             } else {
-
-                List<OrderDtoGet> allCustomer = orderService.getAllTodayOrderByUserId(userDto);
-                return new ResponseEntity<>(allCustomer, HttpStatus.OK);
+                PaginationResponse<OrderDtoGet> response = orderService.getAllTodayOrderByUserIdPaginated(userDto, page, size, search, status, productId);
+                return new ResponseEntity<>(response, HttpStatus.OK);
             }
         } catch (Exception e) {
-            return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
+            return new ResponseEntity<>("Error retrieving orders: " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -75,28 +79,27 @@ public class OrderController {
     }
 
     @GetMapping("/allCustomer")
-    public ResponseEntity<Object> getAllCustomer(@RequestHeader(name = "Authorization") String authorizationHeader,
-                                                  @RequestParam(defaultValue = "0") int page,
-                                                  @RequestParam(defaultValue = "10") int size,
-                                                  @RequestParam(required = false) String search,
-                                                  @RequestParam(defaultValue = "NAME") String searchField,
-                                                  @RequestParam(required = false) String status) {
+    public ResponseEntity<Object> getAllCustomer(
+            @RequestHeader(name = "Authorization") String authorizationHeader,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Integer productId) {
         try {
             if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
                 return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
             }
             UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
             if (Objects.equals(userDto.getRole(), "SUPER USER") || Objects.equals(userDto.getRole(), "ADMIN")) {
-
-                PaginationResponse<OrderDtoGet> response = orderService.getAllOrderPaginated(page, size, search, searchField, status);
+                PaginationResponse<OrderDtoGet> response = orderService.getAllOrderPaginated(page, size, search, status, productId);
                 return new ResponseEntity<>(response, HttpStatus.OK);
             } else {
-
-                List<OrderDtoGet> allCustomer = orderService.getAllOrderByUserId(userDto);
-                return new ResponseEntity<>(allCustomer, HttpStatus.OK);
+                PaginationResponse<OrderDtoGet> response = orderService.getAllOrderByUserIdPaginated(userDto, page, size, search, status, productId);
+                return new ResponseEntity<>(response, HttpStatus.OK);
             }
         } catch (Exception e) {
-            return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
+            return new ResponseEntity<>("Error retrieving orders: " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
