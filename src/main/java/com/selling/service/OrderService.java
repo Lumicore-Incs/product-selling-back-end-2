@@ -19,13 +19,17 @@ public interface OrderService {
 
   List<OrderDtoGet> getAllOrderByUserId(UserDto userDto);
 
-  PaginationResponse<OrderDtoGet> getAllTodayOrderPaginated(int page, int size, String search, String status, Integer productId);
+  PaginationResponse<OrderDtoGet> getAllTodayOrderPaginated(int page, int size, String search, String status,
+      Integer productId);
 
-  PaginationResponse<OrderDtoGet> getAllTodayOrderByUserIdPaginated(UserDto userDto, int page, int size, String search, String status, Integer productId);
+  PaginationResponse<OrderDtoGet> getAllTodayOrderByUserIdPaginated(UserDto userDto, int page, int size, String search,
+      String status, Integer productId);
 
-  PaginationResponse<OrderDtoGet> getAllOrderPaginated(int page, int size, String search, String status, Integer productId);
+  PaginationResponse<OrderDtoGet> getAllOrderPaginated(int page, int size, String search, String status,
+      Integer productId);
 
-  PaginationResponse<OrderDtoGet> getAllOrderByUserIdPaginated(UserDto userDto, int page, int size, String search, String status, Integer productId);
+  PaginationResponse<OrderDtoGet> getAllOrderByUserIdPaginated(UserDto userDto, int page, int size, String search,
+      String status, Integer productId);
 
   List<OrderDtoGet> getTemporaryOrders(UserDto dto);
 

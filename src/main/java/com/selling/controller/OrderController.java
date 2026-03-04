@@ -4,14 +4,27 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import com.selling.dto.*;
-import com.selling.dto.get.GetUserDetailsDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.selling.dto.ApiResponse;
+import com.selling.dto.CustomerRequestDTO;
+import com.selling.dto.PaginationResponse;
+import com.selling.dto.TrackingDto;
+import com.selling.dto.UserDto;
 import com.selling.dto.get.OrderDtoGet;
 import com.selling.service.OrderService;
 import com.selling.util.JWTTokenGenerator;
@@ -25,157 +38,162 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @RequestMapping("/order")
 public class OrderController {
-    @Autowired
-    private JWTTokenGenerator jwtTokenGenerator;
+  @Autowired
+  private JWTTokenGenerator jwtTokenGenerator;
 
-    @Autowired
-    private final OrderService orderService;
+  @Autowired
+  private final OrderService orderService;
 
-    @GetMapping
-    public ResponseEntity<Object> getAllTodayCustomer(
-            @RequestHeader(name = "Authorization") String authorizationHeader,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String search,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) Integer productId) {
-        try {
-            if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
-                return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
-            }
-            UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
-            System.out.println(userDto.getRole());
-            if (Objects.equals(userDto.getRole(), "SUPER USER") || Objects.equals(userDto.getRole(), "ADMIN")) {
-                PaginationResponse<OrderDtoGet> response = orderService.getAllTodayOrderPaginated(page, size, search, status, productId);
-                return new ResponseEntity<>(response, HttpStatus.OK);
-            } else {
-                PaginationResponse<OrderDtoGet> response = orderService.getAllTodayOrderByUserIdPaginated(userDto, page, size, search, status, productId);
-                return new ResponseEntity<>(response, HttpStatus.OK);
-            }
-        } catch (Exception e) {
-            return new ResponseEntity<>("Error retrieving orders: " + e.getMessage(),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+  @GetMapping
+  public ResponseEntity<Object> getAllTodayCustomer(
+      @RequestHeader(name = "Authorization") String authorizationHeader,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size,
+      @RequestParam(required = false) String search,
+      @RequestParam(required = false) String status,
+      @RequestParam(required = false) Integer productId) {
+    try {
+      if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
+        return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
+      }
+      UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
+      System.out.println(userDto.getRole());
+      if (Objects.equals(userDto.getRole(), "SUPER USER") || Objects.equals(userDto.getRole(), "ADMIN")) {
+        PaginationResponse<OrderDtoGet> response = orderService.getAllTodayOrderPaginated(page, size, search, status,
+            productId);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+      } else {
+        PaginationResponse<OrderDtoGet> response = orderService.getAllTodayOrderByUserIdPaginated(userDto, page, size,
+            search, status, productId);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+      }
+    } catch (Exception e) {
+      return new ResponseEntity<>("Error retrieving orders: " + e.getMessage(),
+          HttpStatus.INTERNAL_SERVER_ERROR);
     }
+  }
 
-    @PutMapping("/{id}/duplicate")
-    public ResponseEntity<Object> resolveDuplicateOrder(
-            @RequestHeader(name = "Authorization") String authorizationHeader,
-            @PathVariable Integer id, @RequestBody @Valid CustomerRequestDTO requestDTO) {
-        try {
-            if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(ApiResponse.error("Invalid token", 401));
-            }
-            UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
-            Object result = orderService.resolveDuplicateOrder(id, userDto.getRole(), requestDTO);
-            return new ResponseEntity<>(result, HttpStatus.OK);
-        } catch (ResponseStatusException rse) {
-            return new ResponseEntity<>(rse.getReason(), rse.getStatusCode());
-        } catch (Exception e) {
-            return new ResponseEntity<>("Error resolving order: " + e.getMessage(),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+  @PutMapping("/{id}/duplicate")
+  public ResponseEntity<Object> resolveDuplicateOrder(
+      @RequestHeader(name = "Authorization") String authorizationHeader,
+      @PathVariable Integer id, @RequestBody @Valid CustomerRequestDTO requestDTO) {
+    try {
+      if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(ApiResponse.error("Invalid token", 401));
+      }
+      UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
+      Object result = orderService.resolveDuplicateOrder(id, userDto.getRole(), requestDTO);
+      return new ResponseEntity<>(result, HttpStatus.OK);
+    } catch (ResponseStatusException rse) {
+      return new ResponseEntity<>(rse.getReason(), rse.getStatusCode());
+    } catch (Exception e) {
+      return new ResponseEntity<>("Error resolving order: " + e.getMessage(),
+          HttpStatus.INTERNAL_SERVER_ERROR);
     }
+  }
 
-    @GetMapping("/allCustomer")
-    public ResponseEntity<Object> getAllCustomer(
-            @RequestHeader(name = "Authorization") String authorizationHeader,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String search,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) Integer productId) {
-        try {
-            if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
-                return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
-            }
-            UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
-            if (Objects.equals(userDto.getRole(), "SUPER USER") || Objects.equals(userDto.getRole(), "ADMIN")) {
-                PaginationResponse<OrderDtoGet> response = orderService.getAllOrderPaginated(page, size, search, status, productId);
-                return new ResponseEntity<>(response, HttpStatus.OK);
-            } else {
-                PaginationResponse<OrderDtoGet> response = orderService.getAllOrderByUserIdPaginated(userDto, page, size, search, status, productId);
-                return new ResponseEntity<>(response, HttpStatus.OK);
-            }
-        } catch (Exception e) {
-            return new ResponseEntity<>("Error retrieving orders: " + e.getMessage(),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+  @GetMapping("/allCustomer")
+  public ResponseEntity<Object> getAllCustomer(
+      @RequestHeader(name = "Authorization") String authorizationHeader,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size,
+      @RequestParam(required = false) String search,
+      @RequestParam(required = false) String status,
+      @RequestParam(required = false) Integer productId) {
+    try {
+      if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
+        return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
+      }
+      UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
+      if (Objects.equals(userDto.getRole(), "SUPER USER") || Objects.equals(userDto.getRole(), "ADMIN")) {
+        PaginationResponse<OrderDtoGet> response = orderService.getAllOrderPaginated(page, size, search, status,
+            productId);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+      } else {
+        PaginationResponse<OrderDtoGet> response = orderService.getAllOrderByUserIdPaginated(userDto, page, size,
+            search, status, productId);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+      }
+    } catch (Exception e) {
+      return new ResponseEntity<>("Error retrieving orders: " + e.getMessage(),
+          HttpStatus.INTERNAL_SERVER_ERROR);
     }
+  }
 
-    @GetMapping("/duplicate")
-    public ResponseEntity<Object> getDuplicateCustomerOrders(
-            @RequestHeader(name = "Authorization") String authorizationHeader) {
-        try {
-            if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(ApiResponse.error("Invalid token", 401));
-            }
-            UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
-            List<OrderDtoGet> temporaryOrders = orderService.getTemporaryOrders(userDto);
+  @GetMapping("/duplicate")
+  public ResponseEntity<Object> getDuplicateCustomerOrders(
+      @RequestHeader(name = "Authorization") String authorizationHeader) {
+    try {
+      if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(ApiResponse.error("Invalid token", 401));
+      }
+      UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
+      List<OrderDtoGet> temporaryOrders = orderService.getTemporaryOrders(userDto);
 
-            return new ResponseEntity<>(temporaryOrders, HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+      return new ResponseEntity<>(temporaryOrders, HttpStatus.OK);
+    } catch (Exception e) {
+      return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
+          HttpStatus.INTERNAL_SERVER_ERROR);
     }
+  }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Object> deleteOrder(@RequestHeader(name = "Authorization") String authorizationHeader,
-                                              @PathVariable Integer id) {
-        try {
-            if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(ApiResponse.error("Invalid token", 401));
-            }
+  @DeleteMapping("/{id}")
+  public ResponseEntity<Object> deleteOrder(@RequestHeader(name = "Authorization") String authorizationHeader,
+      @PathVariable Integer id) {
+    try {
+      if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(ApiResponse.error("Invalid token", 401));
+      }
 
-            Object result = orderService.deleteOrder(id);
-            return new ResponseEntity<>(result, HttpStatus.OK);
-        } catch (ResponseStatusException rse) {
-            return new ResponseEntity<>(rse.getReason(), rse.getStatusCode());
-        } catch (Exception e) {
-            return new ResponseEntity<>("Error deleting order: " + e.getMessage(),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+      Object result = orderService.deleteOrder(id);
+      return new ResponseEntity<>(result, HttpStatus.OK);
+    } catch (ResponseStatusException rse) {
+      return new ResponseEntity<>(rse.getReason(), rse.getStatusCode());
+    } catch (Exception e) {
+      return new ResponseEntity<>("Error deleting order: " + e.getMessage(),
+          HttpStatus.INTERNAL_SERVER_ERROR);
     }
+  }
 
-    @PostMapping
-    public ResponseEntity<Object> trackingUpload(@RequestHeader(name = "Authorization") String authorizationHeader, @RequestBody List<TrackingDto> trackingList) {
-        try {
+  @PostMapping
+  public ResponseEntity<Object> trackingUpload(@RequestHeader(name = "Authorization") String authorizationHeader,
+      @RequestBody List<TrackingDto> trackingList) {
+    try {
 
-            if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(ApiResponse.error("Invalid token", 401));
-            }
+      if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(ApiResponse.error("Invalid token", 401));
+      }
 
-            String result = orderService.trackingUpload(trackingList);
+      String result = orderService.trackingUpload(trackingList);
 
-            return new ResponseEntity<>(result, HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+      return new ResponseEntity<>(result, HttpStatus.OK);
+    } catch (Exception e) {
+      return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
+          HttpStatus.INTERNAL_SERVER_ERROR);
     }
+  }
 
-    @GetMapping("/getUrgentOrders")
-    public ResponseEntity<Object> getUrgentOrders(
-            @RequestHeader(name = "Authorization") String authorizationHeader,
-            @RequestParam Long id,
-            @RequestParam String date) {
+  @GetMapping("/getUrgentOrders")
+  public ResponseEntity<Object> getUrgentOrders(
+      @RequestHeader(name = "Authorization") String authorizationHeader,
+      @RequestParam Long id,
+      @RequestParam String date) {
 
-        try {
-            if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
-                return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
-            }
+    try {
+      if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
+        return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
+      }
 
-            ArrayList<String> orders = orderService.getUrgentOrders(id, date);
-            return new ResponseEntity<>(orders, HttpStatus.OK);
+      ArrayList<String> orders = orderService.getUrgentOrders(id, date);
+      return new ResponseEntity<>(orders, HttpStatus.OK);
 
-        } catch (Exception e) {
-            return new ResponseEntity<>("Error retrieving orders: " + e.getMessage(),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    } catch (Exception e) {
+      return new ResponseEntity<>("Error retrieving orders: " + e.getMessage(),
+          HttpStatus.INTERNAL_SERVER_ERROR);
     }
+  }
 }
