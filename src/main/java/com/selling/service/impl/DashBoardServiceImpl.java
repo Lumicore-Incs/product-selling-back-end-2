@@ -142,42 +142,26 @@ public class DashBoardServiceImpl implements DashBoardService {
                            String productName = product.getName();
                            Integer qty = orderDetail.getQty();
 
-                           // Check if DailyCountDetails already exists for this product
-                           List<DailyCountDetails> existingDetails = dailyCountDetailsRepo
-                               .findByDailyCountAndProductId(dailyCount, productId);
-                           if (!existingDetails.isEmpty()) {
-                               for (DailyCountDetails existingDetail : existingDetails) {
-                                   // Update existing record
-                                   if (Objects.equals(existingDetail.getCategory(), qty)){
-                                       existingDetail.setQty(existingDetail.getQty() + qty);
-                                       dailyCountDetailsRepo.save(existingDetail);
-                                       break;
-                                   }else {
-                                       DailyCountDetails newDetails = new DailyCountDetails();
-                                       newDetails.setProductId(existingDetail.getProductId());
-                                       newDetails.setProductName(existingDetail.getProductName());
-                                       newDetails.setQty(qty);
-                                       newDetails.setCategory(orderDetail.getQty());
-                                       newDetails.setDailyCount(dailyCount);
-                                       newDetails.setProduct(product);
-                                       dailyCountDetailsRepo.save(newDetails);
-                                       break;
-                                   }
-                               }
-                           } else {
-                               // Create new DailyCountDetails
+                           Optional<DailyCountDetails> existingDetails = dailyCountDetailsRepo
+                                   .findByDailyCountAndProductIdAndCategory(dailyCount, productId,qty);
+
+                           if (existingDetails.isPresent()){
+                               DailyCountDetails dailyCountDetails = existingDetails.get();
+                               dailyCountDetails.setQty(dailyCountDetails.getQty()+1);
+                               dailyCountDetailsRepo.save(dailyCountDetails);
+                           }else {
                                DailyCountDetails newDetails = new DailyCountDetails();
                                newDetails.setProductId(productId);
                                newDetails.setProductName(productName);
-                               newDetails.setQty(qty);
-                               newDetails.setCategory(orderDetail.getQty());
+                               newDetails.setQty(1);
+                               newDetails.setCategory(qty);
                                newDetails.setDailyCount(dailyCount);
                                newDetails.setProduct(product);
                                dailyCountDetailsRepo.save(newDetails);
                            }
-                           
+
                            // Update total quantity in DailyCount
-                           dailyCount.setTotalQty(dailyCount.getTotalQty() + qty);
+                           dailyCount.setTotalQty(dailyCount.getTotalQty() + 1);
                        }
                        
                        dailyCount.setLastTime(LocalDateTime.now());

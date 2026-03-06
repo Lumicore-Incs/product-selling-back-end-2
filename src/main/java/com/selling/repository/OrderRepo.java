@@ -117,7 +117,10 @@ public interface OrderRepo extends JpaRepository<Order, Integer> {
 
   List<Order> findAllByOrderByOrderIdDesc();
 
-  @Query("SELECT DISTINCT o.orderId FROM Order o JOIN o.orderDetails od WHERE od.product.productId = :productId")
+  @Query("SELECT DISTINCT o.orderId FROM Order o JOIN o.orderDetails od WHERE od.product.productId = :productId ORDER BY o.orderId DESC")
   List<Integer> findOrderIdsByProductId(@Param("productId") Integer productId);
+
+
+  List<Order> findByUserOrderByOrderIdDesc(User map);
 
 }

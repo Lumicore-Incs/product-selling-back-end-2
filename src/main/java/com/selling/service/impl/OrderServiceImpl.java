@@ -248,14 +248,14 @@ public class OrderServiceImpl implements OrderService {
   @Override
   public PaginationResponse<OrderDtoGet> getAllOrderPaginated(int page, int size, String search, String status,
       Integer productId) {
-    List<Order> allOrders = orderRepo.findAll();
+    List<Order> allOrders = orderRepo.findAllByOrderByOrderIdDesc();
     return buildFilteredPaginatedResponse(allOrders, page, size, search, status, productId, false, null);
   }
 
   @Override
   public PaginationResponse<OrderDtoGet> getAllOrderByUserIdPaginated(UserDto userDto, int page, int size,
       String search, String status, Integer productId) {
-    List<Order> userOrders = orderRepo.findByUser(mapperService.map(userDto, User.class));
+    List<Order> userOrders = orderRepo.findByUserOrderByOrderIdDesc(mapperService.map(userDto, User.class));
     return buildFilteredPaginatedResponse(userOrders, page, size, search, status, productId, false, null);
   }
 

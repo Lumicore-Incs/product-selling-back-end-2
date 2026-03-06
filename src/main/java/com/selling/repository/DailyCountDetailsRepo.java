@@ -15,4 +15,7 @@ public interface DailyCountDetailsRepo extends JpaRepository<DailyCountDetails, 
 
 	@Query("SELECT dcd FROM DailyCountDetails dcd WHERE dcd.dailyCount = :dailyCount AND dcd.productId = :productId")
 	List<DailyCountDetails> findByDailyCountAndProductId(@Param("dailyCount") DailyCount dailyCount, @Param("productId") Integer productId);
+
+	@Query("SELECT dcd FROM DailyCountDetails dcd WHERE dcd.dailyCount = :dailyCount AND dcd.productId = :productId AND dcd.category=:category")
+	Optional<DailyCountDetails> findByDailyCountAndProductIdAndCategory(@Param("dailyCount") DailyCount dailyCount, @Param("productId") Integer productId,@Param("category") Integer category);
 }
