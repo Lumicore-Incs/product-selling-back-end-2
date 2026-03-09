@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.selling.dto.OrderDto;
 import com.selling.dto.get.GetUserDetailsDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
@@ -168,6 +169,9 @@ public class DashboardController {
         return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
       }
       GetUserDetailsDto entities = dashBoardService.getUserDetails(id);
+      for (OrderDto dto: entities.getOrder()) {
+        System.out.println("orderssss = "+dto.getOrderId());
+      }
       return new ResponseEntity<>(entities, HttpStatus.OK);
 
     } catch (Exception e) {

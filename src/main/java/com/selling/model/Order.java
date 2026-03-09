@@ -43,6 +43,9 @@ public class Order {
 
   private LocalDateTime date;
 
+  @Column(name = "delivery_date")
+  private LocalDateTime deliveryDate;
+
   private String trackingId;
 
   private String status;

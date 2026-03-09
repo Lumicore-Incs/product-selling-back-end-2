@@ -88,7 +88,7 @@ public interface OrderRepo extends JpaRepository<Order, Integer> {
           FROM Order o
           JOIN o.orderDetails od
           WHERE o.status = :status
-          AND o.date >= :start
+          AND o.deliveryDate >= :start
       """)
   Long countByStatusAndDateBetween(
       @Param("status") String status,
@@ -99,7 +99,7 @@ public interface OrderRepo extends JpaRepository<Order, Integer> {
           FROM Order o
           JOIN o.orderDetails od
           WHERE o.status = :status
-          AND o.date >= :start
+          AND o.deliveryDate >= :start
           AND o.user.id = :userId
       """)
   Long countByCustomerUserEmailAndStatusAndDateBetween(

@@ -2,6 +2,7 @@ package com.selling.service.impl;
 
 import static com.selling.dto.ApiResponse.success;
 
+import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -82,7 +83,6 @@ public class OrderServiceImpl implements OrderService {
   @Override
   @Transactional
   public String trackingUpload(List<TrackingDto> trackingList) {
-    System.out.println("hutta");
     try {
       List<String> results = new ArrayList<>();
       int successCount = 0;
@@ -382,6 +382,7 @@ public class OrderServiceImpl implements OrderService {
           String value = checkTrackingStatus(order.getTrackingId());
           if (value != null && !value.equals(order.getStatus())) {
             order.setStatus(value);
+            order.setDeliveryDate(LocalDateTime.now());
             orderRepo.save(order);
           }
         }))
