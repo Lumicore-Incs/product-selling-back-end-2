@@ -5,24 +5,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.selling.dto.get.GetUserDetailsDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.web.bind.annotation.*;
 
 import com.selling.dto.UserDto;
 import com.selling.dto.get.ExcelTypeDto;
-import com.selling.dto.get.GetUserDetailsDto;
 import com.selling.service.DashBoardService;
 import com.selling.service.OrderService;
 import com.selling.util.ExcelExportService;
@@ -45,13 +39,33 @@ public class DashboardController {
   private final JWTTokenGenerator jwtTokenGenerator;
 
   public void updateOrderDetails() {
-    // orderService.updateOrderDetails();
+//    orderService.updateOrderDetails();
   }
 
   @GetMapping("/updateTrackingStatus")
-  public void updateTrackingStatus(@RequestHeader(name = "Authorization") String authorizationHeader) {
-    UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
-    orderService.updateOrderDetails(userDto);
+  public ResponseEntity<Object> updateTrackingStatus(@RequestHeader(name = "Authorization") String authorizationHeader) {
+    try {
+      if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
+        return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
+      }
+      UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
+      // Execute in background
+      updateOrderDetailsAsync(userDto);
+      return new ResponseEntity<>("Tracking status update initiated in background", HttpStatus.OK);
+    } catch (Exception e) {
+      return new ResponseEntity<>("Error initiating tracking status update: " + e.getMessage(),
+          HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @Async
+   void updateOrderDetailsAsync(UserDto userDto) {
+    try {
+      orderService.updateOrderDetails(userDto);
+    } catch (Exception e) {
+      System.err.println("Error updating tracking status in background: " + e.getMessage());
+      e.printStackTrace();
+    }
   }
 
   @GetMapping("/excel/{name}")
@@ -81,19 +95,30 @@ public class DashboardController {
 
   @PutMapping("/conform")
   public ResponseEntity<Object> ConformExport(
-      @RequestHeader(name = "Authorization") String authorizationHeader,
-      @RequestBody List<String> serialNumbers) {
+          @RequestHeader(name = "Authorization") String authorizationHeader,
+          @RequestBody List<String> serialNumbers) {
     try {
       if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
         return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
       }
-      String s = dashBoardService.ConformOrder(serialNumbers);
-      return new ResponseEntity<>(s, HttpStatus.OK);
+
+        ConformOrderAsync(serialNumbers);
+      return new ResponseEntity<>("success", HttpStatus.OK);
     } catch (Exception e) {
       return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
-          HttpStatus.INTERNAL_SERVER_ERROR);
+              HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+
+    @Async
+    void ConformOrderAsync(List<String> serialNumbers) {
+        try {
+            dashBoardService.ConformOrder(serialNumbers);
+        } catch (Exception e) {
+            System.err.println("Error updating tracking status in background: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 
   @GetMapping()
   public ResponseEntity<Object> getAllDetails(@RequestHeader(name = "Authorization") String authorizationHeader) {
@@ -121,8 +146,7 @@ public class DashboardController {
   }
 
   @GetMapping("/exportData/{name}")
-  public ResponseEntity<Object> getAndExportToOrder(@RequestHeader(name = "Authorization") String authorizationHeader,
-      @PathVariable String name) {
+  public ResponseEntity<Object> getAndExportToOrder(@RequestHeader(name = "Authorization") String authorizationHeader, @PathVariable String name) {
     try {
       if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
         return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
@@ -132,15 +156,13 @@ public class DashboardController {
 
     } catch (Exception e) {
       return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
-          HttpStatus.INTERNAL_SERVER_ERROR);
+              HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
   @GetMapping("/getUserDetails/{id}")
-  public ResponseEntity<Object> getUserDetails(@RequestHeader(name = "Authorization") String authorizationHeader,
-      @PathVariable Long id) {
+  public ResponseEntity<Object> getUserDetails(@RequestHeader(name = "Authorization") String authorizationHeader, @PathVariable Long id) {
     try {
-      System.out.println("plll");
       if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
         return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
       }
@@ -149,7 +171,7 @@ public class DashboardController {
 
     } catch (Exception e) {
       return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
-          HttpStatus.INTERNAL_SERVER_ERROR);
+              HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

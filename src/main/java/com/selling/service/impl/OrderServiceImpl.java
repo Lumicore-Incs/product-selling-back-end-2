@@ -2,23 +2,21 @@ package com.selling.service.impl;
 
 import static com.selling.dto.ApiResponse.success;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.google.gson.JsonArray;
@@ -26,6 +24,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.selling.dto.CustomerDto;
 import com.selling.dto.CustomerRequestDTO;
+import com.selling.dto.PaginationResponse;
 import com.selling.dto.ProductDto;
 import com.selling.dto.TrackingDto;
 import com.selling.dto.UserDto;
@@ -55,6 +54,7 @@ public class OrderServiceImpl implements OrderService {
   private final ProductRepo productRepository;
   private final StockService stockService;
   private final CustomerRepo customerRepo;
+  private final RestTemplate restTemplate;
 
   @Override
   public String generateOrderSerialNumber(Product product, UserDto userDto) {
@@ -83,7 +83,6 @@ public class OrderServiceImpl implements OrderService {
   @Override
   @Transactional
   public String trackingUpload(List<TrackingDto> trackingList) {
-    System.out.println("hutta");
     try {
       List<String> results = new ArrayList<>();
       int successCount = 0;
@@ -233,45 +232,137 @@ public class OrderServiceImpl implements OrderService {
   }
 
   @Override
-  public Page<OrderDtoGet> getAllOrderPaginated(int page, int size, String status, String search) {
-    PageRequest pageRequest = PageRequest.of(page, size);
-    Page<Order> orderPage = orderRepo.findAllWithFilters(
-        (status == null || status.isBlank()) ? "all" : status,
-        (search == null) ? "" : search.trim(),
-        pageRequest);
-    List<OrderDtoGet> content = orderPage.getContent().stream()
-        .filter(o -> o.getCustomer() != null)
-        .map(order -> {
-          OrderDtoGet dto = mapperService.map(order, OrderDtoGet.class);
-          dto.setCustomer(mapperService.map(order.getCustomer(), CustomerDto.class));
-          dto.setOrderDetails(getOrderDetailsData(order));
-          return dto;
-        })
-        .collect(Collectors.toList());
-    return new PageImpl<>(content, orderPage.getPageable(), orderPage.getTotalElements());
+  public PaginationResponse<OrderDtoGet> getAllTodayOrderPaginated(int page, int size, String search, String status,
+      Integer productId) {
+    List<Order> allOrders = orderRepo.findAll();
+    return buildFilteredPaginatedResponse(allOrders, page, size, search, status, productId, true, null);
   }
 
   @Override
-  public Page<OrderDtoGet> getAllOrderByUserIdPaginated(UserDto userDto, int page, int size, String status,
-      String search) {
-    PageRequest pageRequest = PageRequest.of(page, size);
-    Page<Order> orderPage = orderRepo.findAllWithFiltersByUserId(
-        userDto.getId(),
-        (status == null || status.isBlank()) ? "all" : status,
-        (search == null) ? "" : search.trim(),
-        pageRequest);
-    List<OrderDtoGet> content = orderPage.getContent().stream()
-        .filter(o -> o.getCustomer() != null)
-        .map(order -> {
-          OrderDtoGet dto = mapperService.map(order, OrderDtoGet.class);
-          dto.setCustomer(mapperService.map(order.getCustomer(), CustomerDto.class));
-          dto.setOrderDetails(getOrderDetailsData(order));
-          return dto;
-        })
-        .collect(Collectors.toList());
-    return new PageImpl<>(content, orderPage.getPageable(), orderPage.getTotalElements());
+  public PaginationResponse<OrderDtoGet> getAllTodayOrderByUserIdPaginated(UserDto userDto, int page, int size,
+      String search, String status, Integer productId) {
+    List<Order> userOrders = orderRepo.findByUser(mapperService.map(userDto, User.class));
+    return buildFilteredPaginatedResponse(userOrders, page, size, search, status, productId, true, null);
   }
 
+  @Override
+  public PaginationResponse<OrderDtoGet> getAllOrderPaginated(int page, int size, String search, String status,
+      Integer productId) {
+    List<Order> allOrders = orderRepo.findAllByOrderByOrderIdDesc();
+    return buildFilteredPaginatedResponse(allOrders, page, size, search, status, productId, false, null);
+  }
+
+  @Override
+  public PaginationResponse<OrderDtoGet> getAllOrderByUserIdPaginated(UserDto userDto, int page, int size,
+      String search, String status, Integer productId) {
+    List<Order> userOrders = orderRepo.findByUserOrderByOrderIdDesc(mapperService.map(userDto, User.class));
+    return buildFilteredPaginatedResponse(userOrders, page, size, search, status, productId, false, null);
+  }
+
+  /**
+   * Shared helper: filter + paginate a list of Order entities.
+   *
+   * @param source    raw list of orders to filter
+   * @param page      zero-based page number
+   * @param size      page size
+   * @param search    LIKE match against customerName, weyBillId, contact01,
+   *                  contact02
+   * @param status    exact match on order status (null → no filter)
+   * @param productId filter orders containing at least one detail for this
+   *                  product (null → no filter)
+   * @param todayOnly if true, restrict to orders whose date is today
+   * @param ignored   reserved (pass null)
+   */
+  private PaginationResponse<OrderDtoGet> buildFilteredPaginatedResponse(
+      List<Order> source, int page, int size,
+      String search, String status, Integer productId,
+      boolean todayOnly, Object ignored) {
+    try {
+      // Resolve order IDs that contain the requested product (single DB call)
+      final java.util.Set<Integer> productOrderIds;
+      if (productId != null) {
+        productOrderIds = new java.util.HashSet<>(orderRepo.findOrderIdsByProductId(productId));
+      } else {
+        productOrderIds = null;
+      }
+
+      LocalDate today = LocalDate.now();
+      String searchLower = (search != null && !search.isEmpty()) ? search.toLowerCase() : null;
+      String statusFilter = (status != null && !status.isEmpty() && !status.equals("ALL STATUS")) ? status : null;
+
+      List<Order> filtered = source.stream()
+          .filter(order -> {
+            if (order.getCustomer() == null)
+              return false;
+
+            // Today-only restriction
+            if (todayOnly && !order.getDate().toLocalDate().equals(today))
+              return false;
+
+            // Exact status match
+            if (statusFilter != null && !statusFilter.equals(order.getStatus()))
+              return false;
+
+            // productId: must appear in at least one order detail
+            if (productOrderIds != null && !productOrderIds.contains(order.getOrderId()))
+              return false;
+
+            // Multi-field search: customerName, weyBillId, contact01, contact02
+            if (searchLower != null) {
+              String name = order.getCustomer().getName() != null ? order.getCustomer().getName().toLowerCase() : "";
+              String waybill = order.getWeyBillId() != null ? order.getWeyBillId().toLowerCase() : "";
+              String contact1 = order.getCustomer().getContact01() != null
+                  ? order.getCustomer().getContact01().toLowerCase()
+                  : "";
+              String contact2 = order.getCustomer().getContact02() != null
+                  ? order.getCustomer().getContact02().toLowerCase()
+                  : "";
+              if (!name.contains(searchLower) && !waybill.contains(searchLower)
+                  && !contact1.contains(searchLower) && !contact2.contains(searchLower)) {
+                return false;
+              }
+            }
+
+            return true;
+          })
+          .collect(Collectors.toList());
+
+      long totalElements = filtered.size();
+      int totalPages = (totalElements == 0) ? 0 : (int) Math.ceil((double) totalElements / size);
+
+      if (page < 0)
+        page = 0;
+      if (totalElements > 0 && page >= totalPages)
+        page = totalPages - 1;
+
+      int startIndex = page * size;
+      int endIndex = (int) Math.min((long) startIndex + size, totalElements);
+
+      List<OrderDtoGet> content = filtered.subList(startIndex, endIndex).stream()
+          .map(order -> {
+            OrderDtoGet dto = mapperService.map(order, OrderDtoGet.class);
+            dto.setCustomer(mapperService.map(order.getCustomer(), CustomerDto.class));
+            dto.setOrderDetails(getOrderDetailsData(order));
+            return dto;
+          })
+          .collect(Collectors.toList());
+
+      PaginationResponse<OrderDtoGet> response = new PaginationResponse<>();
+      response.setContent(content);
+      response.setPageNumber(page);
+      response.setPageSize(size);
+      response.setTotalElements(totalElements);
+      response.setTotalPages(totalPages);
+      response.setLastPage(totalElements == 0 || page == totalPages - 1);
+      return response;
+
+    } catch (Exception e) {
+      System.out.println("Error fetching paginated orders: " + e.getMessage());
+      throw new RuntimeException("Error fetching paginated orders", e);
+    }
+  }
+
+  @Async
   @Override
   public void updateOrderDetails(UserDto userDto) {
     List<Order> recentOrders = null;
@@ -281,78 +372,67 @@ public class OrderServiceImpl implements OrderService {
     } else {
       recentOrders = orderRepo.findByUserIdOrderByOrderIdDesc(userDto.getId());
     }
-    for (Order order : recentOrders) {
-      System.out.println("start" + order.getTrackingId());
-      if (!(order.getStatus().equals("Delivered") || order.getStatus().equals("Failed to Deliver")
-          || order.getStatus().equals("NotFound")) && !order.getTrackingId().equals("TRK")) {
-        System.out.println("startsssss" + order.getTrackingId());
-        String value = checkTrackingStatus(order.getTrackingId());
-        // Only update if we got a valid status (not null due to API failure)
-        if (value != null && !value.equals(order.getStatus())) {
-          order.setStatus(value);
-          orderRepo.save(order);
-        }
-      }
-    }
+
+    // Process up to 5 orders in parallel
+    List<CompletableFuture<Void>> futures = recentOrders.stream()
+        .filter(order -> !(order.getStatus().equals("Delivered") || order.getStatus().equals("Failed to Deliver")
+            || order.getStatus().equals("NotFound"))
+            && !order.getTrackingId().equals("TRK"))
+        .map(order -> CompletableFuture.runAsync(() -> {
+          String value = checkTrackingStatus(order.getTrackingId());
+          if (value != null && !value.equals(order.getStatus())) {
+            order.setStatus(value);
+            order.setDeliveryDate(LocalDateTime.now());
+            orderRepo.save(order);
+          }
+        }))
+        .collect(Collectors.toList());
+
+    // Wait for all to complete (with timeout)
+    CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+        .orTimeout(5, TimeUnit.MINUTES) // 5 minute timeout for all
+        .exceptionally(ex -> {
+          System.err.println("Error updating tracking status: " + ex.getMessage());
+          return null;
+        })
+        .join();
   }
 
   private String checkTrackingStatus(String id) {
     String apiUrl = "https://api.transexpress.lk/api/v1/tracking?waybill_id=" + id;
-    HttpURLConnection connection = null;
 
     try {
-      URL url = new URL(apiUrl);
-      connection = (HttpURLConnection) url.openConnection();
-      connection.setRequestMethod("GET");
-      connection.setRequestProperty("Accept", "application/json");
+      String response = restTemplate.getForObject(apiUrl, String.class);
+      JsonObject jsonResponse = JsonParser.parseString(response).getAsJsonObject();
 
-      int responseCode = connection.getResponseCode();
+      JsonArray dataArray = jsonResponse.getAsJsonArray("data");
+      String lastStatus = null;
 
-      if (responseCode == HttpURLConnection.HTTP_OK) {
-        BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-        JsonObject jsonResponse = JsonParser.parseReader(in).getAsJsonObject();
-        in.close();
+      for (int i = 0; i < dataArray.size(); i++) {
+        JsonObject dataItem = dataArray.get(i).getAsJsonObject();
+        if ("tracking_history".equals(dataItem.get("key").getAsString())) {
+          JsonArray historyArray = dataItem.getAsJsonArray("value");
 
-        JsonArray dataArray = jsonResponse.getAsJsonArray("data");
-        String lastStatus = null;
-
-        for (int i = 0; i < dataArray.size(); i++) {
-          JsonObject dataItem = dataArray.get(i).getAsJsonObject();
-          if ("tracking_history".equals(dataItem.get("key").getAsString())) {
-            JsonArray historyArray = dataItem.getAsJsonArray("value");
-
-            if (historyArray.size() > 0) {
-              JsonObject lastStatusItem = historyArray.get(historyArray.size() - 1).getAsJsonObject();
-              lastStatus = lastStatusItem.get("status_name").getAsString();
-            }
-            break;
+          if (historyArray.size() > 0) {
+            JsonObject lastStatusItem = historyArray.get(historyArray.size() - 1).getAsJsonObject();
+            lastStatus = lastStatusItem.get("status_name").getAsString();
           }
+          break;
         }
+      }
 
-        if (lastStatus != null) {
-          return lastStatus;
-        } else {
-          // Don't return "NotFound" - preserve existing status when API has no data
-          System.out.println("No tracking history found for ID: " + id);
-          return null; // Return null to indicate "no update needed"
-        }
+      if (lastStatus != null) {
+        return lastStatus;
       } else {
-        System.out.println("API request failed with response code: " + responseCode + " for tracking ID: " + id);
-        return null; // Don't update status on API failure
+        // Don't return "NotFound" - preserve existing status when API has no data
+        System.out.println("No tracking history found for ID: " + id);
+        return null; // Return null to indicate "no update needed"
       }
 
     } catch (Exception e) {
       e.printStackTrace();
       System.out.println("Error while calling API for tracking ID " + id + ": " + e.getMessage());
       return null; // Don't update status on API exception
-    } finally {
-      // Clean up connection if it was created
-      if (connection != null) {
-        try {
-          connection.disconnect();
-        } catch (Exception ignored) {
-        }
-      }
     }
   }
 

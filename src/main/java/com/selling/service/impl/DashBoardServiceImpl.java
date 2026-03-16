@@ -4,10 +4,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.sql.Date;
 
 import com.selling.dto.OrderDto;
 import com.selling.dto.get.GetUserDetailsDto;
+import com.selling.model.*;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,11 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.selling.dto.UserDto;
 import com.selling.dto.get.ExcelTypeDto;
-import com.selling.model.Customer;
-import com.selling.model.Order;
-import com.selling.model.OrderDetails;
-import com.selling.model.Product;
 import com.selling.repository.CustomerRepo;
+import com.selling.repository.DailyCountRepo;
+import com.selling.repository.DailyCountDetailsRepo;
 import com.selling.repository.OrderRepo;
 import com.selling.repository.ProductRepo;
 import com.selling.service.DashBoardService;
@@ -34,10 +35,11 @@ public class DashBoardServiceImpl implements DashBoardService {
     private final CustomerRepo customerRepo;
     private final OrderRepo orderRepo;
     private final ProductRepo productRepo;
+    private final DailyCountRepo dailyCountRepo;
+    private final DailyCountDetailsRepo dailyCountDetailsRepo;
     @Autowired
     private ModelMapper modelMapper;
 
-    @Transactional
     @Override
     public List<ExcelTypeDto> findOrder(String name) {
 
@@ -106,20 +108,72 @@ public class DashBoardServiceImpl implements DashBoardService {
         }
     }
 
+    @Transactional
     @Override
     public String ConformOrder(List<String> serialNumbers) {
         try {
+           LocalDate today = LocalDate.now();
+           Date todayDate = Date.valueOf(today);
+           
            for (String serialNumber : serialNumbers) {
                Optional<Order> bySerialNo = orderRepo.findBySerialNo(serialNumber);
                if (bySerialNo.isPresent()) {
-                   bySerialNo.get().getCustomer().setStatus("PRINTING");
-                   customerRepo.save(bySerialNo.get().getCustomer());
+                   Order order = bySerialNo.get();
+                   order.getCustomer().setStatus("PRINTING");
+                   customerRepo.save(order.getCustomer());
+                   // Get or create DailyCount for today
+                   DailyCount dailyCount = dailyCountRepo.findByDate(todayDate).orElse(null);
+                   
+                   // If no DailyCount exists for today, create one
+                   if (dailyCount == null) {
+                       dailyCount = new DailyCount();
+                       dailyCount.setDate(todayDate);
+                       dailyCount.setLastTime(LocalDateTime.now());
+                       dailyCount.setTotalQty(0);
+                       dailyCount = dailyCountRepo.save(dailyCount);
+                   }
+                   
+                   // Process each order detail
+                   List<OrderDetails> orderDetailsList = order.getOrderDetails();
+                   if (orderDetailsList != null && !orderDetailsList.isEmpty()) {
+                       for (OrderDetails orderDetail : orderDetailsList) {
+                           Product product = orderDetail.getProduct();
+                           Integer productId = product.getProductId();
+                           String productName = product.getName();
+                           Integer qty = orderDetail.getQty();
+
+                           Optional<DailyCountDetails> existingDetails = dailyCountDetailsRepo
+                                   .findByDailyCountAndProductIdAndCategory(dailyCount, productId,qty);
+
+                           if (existingDetails.isPresent()){
+                               DailyCountDetails dailyCountDetails = existingDetails.get();
+                               dailyCountDetails.setQty(dailyCountDetails.getQty()+1);
+                               dailyCountDetailsRepo.save(dailyCountDetails);
+                           }else {
+                               DailyCountDetails newDetails = new DailyCountDetails();
+                               newDetails.setProductId(productId);
+                               newDetails.setProductName(productName);
+                               newDetails.setQty(1);
+                               newDetails.setCategory(qty);
+                               newDetails.setDailyCount(dailyCount);
+                               newDetails.setProduct(product);
+                               dailyCountDetailsRepo.save(newDetails);
+                           }
+
+                           // Update total quantity in DailyCount
+                           dailyCount.setTotalQty(dailyCount.getTotalQty() + 1);
+                       }
+                       
+                       dailyCount.setLastTime(LocalDateTime.now());
+                       dailyCountRepo.save(dailyCount);
+                   }
                }
            }
         } catch (Exception e) {
             System.out.println("message is : " + e.getMessage());
+            e.printStackTrace();
             return null;
-        }
+    }
         return "success";
     }
 

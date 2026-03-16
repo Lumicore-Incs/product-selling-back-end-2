@@ -35,4 +35,7 @@ public class Product {
 
   @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
   private List<User> users;
+
+  @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
+  private List<DailyCountDetails> dailyCountDetails;
 }

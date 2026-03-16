@@ -1,7 +1,5 @@
 package com.selling.service.impl;
 
-import java.sql.Date;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -56,7 +54,6 @@ public class CustomerServiceImpl implements CustomerService {
 
     Optional<Customer> opt = Optional.empty();
     if (!contacts.isEmpty()) {
-      System.out.println("1");
       LocalDateTime since = LocalDateTime.now().minusWeeks(2);
       List<String> statuses = List.of("TEMPORARY", "PENDING");
       List<Customer> recent = customerRepository.findByContactsWithOrdersSinceAndStatus(contacts, since, statuses);
@@ -76,12 +73,10 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     if (opt.isEmpty()) {
-      System.out.println("2");
       // new customer
       Customer newCustomer = createNewCustomer(requestDTO, userDto);
       opt = Optional.of(newCustomer);
     }else {
-      System.out.println("3");
        updateCustomer(opt.get().getCustomerId(), requestDTO);
     }
     return createNewOrder(requestDTO, opt, userDto);

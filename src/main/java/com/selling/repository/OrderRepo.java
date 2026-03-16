@@ -90,7 +90,7 @@ public interface OrderRepo extends JpaRepository<Order, Integer> {
           FROM Order o
           JOIN o.orderDetails od
           WHERE o.status = :status
-          AND o.date >= :start
+          AND o.deliveryDate >= :start
       """)
   Long countByStatusAndDateBetween(
       @Param("status") String status,
@@ -101,83 +101,35 @@ public interface OrderRepo extends JpaRepository<Order, Integer> {
           FROM Order o
           JOIN o.orderDetails od
           WHERE o.status = :status
-          AND o.date >= :start
+          AND o.deliveryDate >= :start
           AND o.user.id = :userId
       """)
   Long countByCustomerUserEmailAndStatusAndDateBetween(
       @Param("status") String status,
       @Param("userId") Long userId,
       @Param("start") LocalDateTime startOfMonth);
+         
+    @Query("SELECT o FROM Order o WHERE o.user.id = :userId AND o.date BETWEEN :start AND :end")
+    List<Order> findByUserIdAndDateBetween(@Param("userId") Long userId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
-  @Query("""
-          SELECT o
-          FROM Order o
-          JOIN o.orderDetails od
-          WHERE o.user.id = :userId
-      """)
-  List<Order> findByUserId(@Param("userId") Long userId);
+     @Query("SELECT o FROM Order o WHERE o.user.id = :userId AND o.date BETWEEN :start AND :end AND o.status = 'DELIVERED'")
+    List<Order> findByUserIdAndDateBetweenByStatus(@Param("userId") Long userId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+
+    @Query("""
+            SELECT o
+            FROM Order o
+            JOIN o.orderDetails od
+            WHERE o.user.id = :userId
+        """)
+    List<Order> findByUserId(@Param("userId") Long userId);
 
   List<Order> findAllByOrderByOrderIdDesc();
 
-  @Query(value = """
-      SELECT DISTINCT o FROM Order o
-      JOIN o.customer c
-      WHERE (:status IS NULL OR :status = '' OR :status = 'all' OR o.status = :status)
-      AND (:search IS NULL OR :search = '' OR
-           LOWER(c.customerName) LIKE LOWER(CONCAT('%', :search, '%')) OR
-           LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%')) OR
-           c.contact01 LIKE CONCAT('%', :search, '%') OR
-           c.contact02 LIKE CONCAT('%', :search, '%') OR
-           LOWER(o.weyBillId) LIKE LOWER(CONCAT('%', :search, '%')) OR
-           LOWER(o.serialNo) LIKE LOWER(CONCAT('%', :search, '%')))
-      ORDER BY o.orderId DESC
-      """, countQuery = """
-      SELECT COUNT(DISTINCT o) FROM Order o
-      JOIN o.customer c
-      WHERE (:status IS NULL OR :status = '' OR :status = 'all' OR o.status = :status)
-      AND (:search IS NULL OR :search = '' OR
-           LOWER(c.customerName) LIKE LOWER(CONCAT('%', :search, '%')) OR
-           LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%')) OR
-           c.contact01 LIKE CONCAT('%', :search, '%') OR
-           c.contact02 LIKE CONCAT('%', :search, '%') OR
-           LOWER(o.weyBillId) LIKE LOWER(CONCAT('%', :search, '%')) OR
-           LOWER(o.serialNo) LIKE LOWER(CONCAT('%', :search, '%')))
-      """)
-  Page<Order> findAllWithFilters(
-      @Param("status") String status,
-      @Param("search") String search,
-      Pageable pageable);
+  @Query("SELECT DISTINCT o.orderId FROM Order o JOIN o.orderDetails od WHERE od.product.productId = :productId ORDER BY o.orderId DESC")
+  List<Integer> findOrderIdsByProductId(@Param("productId") Integer productId);
 
-  @Query(value = """
-      SELECT DISTINCT o FROM Order o
-      JOIN o.customer c
-      WHERE o.user.id = :userId
-      AND (:status IS NULL OR :status = '' OR :status = 'all' OR o.status = :status)
-      AND (:search IS NULL OR :search = '' OR
-           LOWER(c.customerName) LIKE LOWER(CONCAT('%', :search, '%')) OR
-           LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%')) OR
-           c.contact01 LIKE CONCAT('%', :search, '%') OR
-           c.contact02 LIKE CONCAT('%', :search, '%') OR
-           LOWER(o.weyBillId) LIKE LOWER(CONCAT('%', :search, '%')) OR
-           LOWER(o.serialNo) LIKE LOWER(CONCAT('%', :search, '%')))
-      ORDER BY o.orderId DESC
-      """, countQuery = """
-      SELECT COUNT(DISTINCT o) FROM Order o
-      JOIN o.customer c
-      WHERE o.user.id = :userId
-      AND (:status IS NULL OR :status = '' OR :status = 'all' OR o.status = :status)
-      AND (:search IS NULL OR :search = '' OR
-           LOWER(c.customerName) LIKE LOWER(CONCAT('%', :search, '%')) OR
-           LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%')) OR
-           c.contact01 LIKE CONCAT('%', :search, '%') OR
-           c.contact02 LIKE CONCAT('%', :search, '%') OR
-           LOWER(o.weyBillId) LIKE LOWER(CONCAT('%', :search, '%')) OR
-           LOWER(o.serialNo) LIKE LOWER(CONCAT('%', :search, '%')))
-      """)
-  Page<Order> findAllWithFiltersByUserId(
-      @Param("userId") Long userId,
-      @Param("status") String status,
-      @Param("search") String search,
-      Pageable pageable);
+
+  List<Order> findByUserOrderByOrderIdDesc(User map);
 
 }

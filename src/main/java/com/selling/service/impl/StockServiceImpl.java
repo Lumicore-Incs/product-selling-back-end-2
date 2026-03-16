@@ -1,7 +1,6 @@
 package com.selling.service.impl;
 
 import com.selling.dto.StockDto;
-import com.selling.model.Order;
 import com.selling.model.OrderDetails;
 import com.selling.model.Stock;
 import com.selling.repository.StockRepo;
@@ -10,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;

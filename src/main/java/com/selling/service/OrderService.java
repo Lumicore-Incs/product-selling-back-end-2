@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 
 import com.selling.dto.CustomerRequestDTO;
+import com.selling.dto.PaginationResponse;
 import com.selling.dto.TrackingDto;
 import com.selling.dto.UserDto;
 import com.selling.dto.get.OrderDtoGet;
@@ -20,9 +21,22 @@ public interface OrderService {
 
   List<OrderDtoGet> getAllOrderByUserId(UserDto userDto);
 
+  PaginationResponse<OrderDtoGet> getAllTodayOrderPaginated(int page, int size, String search, String status,
+      Integer productId);
+
+  PaginationResponse<OrderDtoGet> getAllTodayOrderByUserIdPaginated(UserDto userDto, int page, int size, String search,
+      String status, Integer productId);
+
+  PaginationResponse<OrderDtoGet> getAllOrderPaginated(int page, int size, String search, String status,
+      Integer productId);
+
+  PaginationResponse<OrderDtoGet> getAllOrderByUserIdPaginated(UserDto userDto, int page, int size, String search,
+      String status, Integer productId);
+
   Page<OrderDtoGet> getAllOrderPaginated(int page, int size, String status, String search);
 
   Page<OrderDtoGet> getAllOrderByUserIdPaginated(UserDto userDto, int page, int size, String status, String search);
+
 
   List<OrderDtoGet> getTemporaryOrders(UserDto dto);
 
