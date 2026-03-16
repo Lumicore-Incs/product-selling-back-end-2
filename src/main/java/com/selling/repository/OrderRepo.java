@@ -107,13 +107,20 @@ public interface OrderRepo extends JpaRepository<Order, Integer> {
       @Param("userId") Long userId,
       @Param("start") LocalDateTime startOfMonth);
 
-  @Query("""
-          SELECT o
-          FROM Order o
-          JOIN o.orderDetails od
-          WHERE o.user.id = :userId
-      """)
-  List<Order> findByUserId(@Param("userId") Long userId);
+    @Query("SELECT o FROM Order o WHERE o.user.id = :userId AND o.date BETWEEN :start AND :end")
+    List<Order> findByUserIdAndDateBetween(@Param("userId") Long userId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+     @Query("SELECT o FROM Order o WHERE o.user.id = :userId AND o.date BETWEEN :start AND :end AND o.status = 'DELIVERED'")
+    List<Order> findByUserIdAndDateBetweenByStatus(@Param("userId") Long userId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+
+    @Query("""
+            SELECT o
+            FROM Order o
+            JOIN o.orderDetails od
+            WHERE o.user.id = :userId
+        """)
+    List<Order> findByUserId(@Param("userId") Long userId);
 
   List<Order> findAllByOrderByOrderIdDesc();
 
