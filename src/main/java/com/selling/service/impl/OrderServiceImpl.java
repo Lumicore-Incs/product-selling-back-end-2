@@ -35,7 +35,6 @@ import com.selling.model.Order;
 import com.selling.model.OrderDetails;
 import com.selling.model.Product;
 import com.selling.model.User;
-import com.selling.repository.CustomerRepo;
 import com.selling.repository.OrderDetailsRepo;
 import com.selling.repository.OrderRepo;
 import com.selling.repository.ProductRepo;
@@ -53,7 +52,6 @@ public class OrderServiceImpl implements OrderService {
   private final MapperService mapperService;
   private final ProductRepo productRepository;
   private final StockService stockService;
-  private final CustomerRepo customerRepo;
   private final RestTemplate restTemplate;
 
   @Override
@@ -564,5 +562,4 @@ public class OrderServiceImpl implements OrderService {
       throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error deleting order: " + e.getMessage());
     }
   }
-
 }

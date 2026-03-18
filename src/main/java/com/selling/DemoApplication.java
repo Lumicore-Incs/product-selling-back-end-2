@@ -10,7 +10,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
-import com.selling.controller.DashboardController;
 import com.selling.model.User;
 import com.selling.repository.UserRepo;
 
@@ -23,11 +22,9 @@ public class DemoApplication {
   private static final Logger logger = LoggerFactory.getLogger(DemoApplication.class);
   BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
   private final UserRepo userRepo;
-  private final DashboardController dashboardController;
 
-  public DemoApplication(UserRepo userRepo, DashboardController dashboardController) {
+  public DemoApplication(UserRepo userRepo) {
     this.userRepo = userRepo;
-    this.dashboardController = dashboardController;
   }
 
   public static void main(String[] args) {
