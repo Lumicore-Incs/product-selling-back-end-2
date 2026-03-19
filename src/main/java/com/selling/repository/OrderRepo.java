@@ -88,24 +88,26 @@ public interface OrderRepo extends JpaRepository<Order, Integer> {
           FROM Order o
           JOIN o.orderDetails od
           WHERE o.status = :status
-          AND o.deliveryDate >= :start
+          AND o.date BETWEEN :start AND :end
       """)
-  Long countByStatusAndDateBetween(
+  Long countByStatusAndDateRange(
       @Param("status") String status,
-      @Param("start") LocalDateTime startOfMonth);
+      @Param("start") LocalDateTime start,
+      @Param("end") LocalDateTime end);
 
   @Query("""
           SELECT COALESCE(SUM(od.qty), 0)
           FROM Order o
           JOIN o.orderDetails od
-          WHERE o.status = :status
-          AND o.deliveryDate >= :start
-          AND o.user.id = :userId
+          WHERE o.user.id = :userId
+          AND o.status = :status
+          AND o.date BETWEEN :start AND :end
       """)
-  Long countByCustomerUserEmailAndStatusAndDateBetween(
-      @Param("status") String status,
+  Long countByCustomerUserIdAndStatusAndDateBetween(
       @Param("userId") Long userId,
-      @Param("start") LocalDateTime startOfMonth);
+      @Param("status") String status,
+      @Param("start") LocalDateTime start,
+      @Param("end") LocalDateTime end);
          
     @Query("SELECT o FROM Order o WHERE o.user.id = :userId AND o.date BETWEEN :start AND :end")
     List<Order> findByUserIdAndDateBetween(@Param("userId") Long userId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);

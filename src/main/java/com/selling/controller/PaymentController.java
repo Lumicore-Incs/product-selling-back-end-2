@@ -171,10 +171,10 @@ public class PaymentController {
         }
         UserDto userDto = userService.getUserById(String.valueOf(id));
         UserAnalyticsDtoGet userAnalyticsDtoGet = new UserAnalyticsDtoGet();
-        userAnalyticsDtoGet.setTodayQty(dashBoardService.getTotalOrder(userDto));
-        userAnalyticsDtoGet.setMonthQty(dashBoardService.getTodayOrder(userDto));
-        userAnalyticsDtoGet.setDeliveredQty(dashBoardService.getConformOrder(userDto));
-        userAnalyticsDtoGet.setReturnQty(dashBoardService.getCancelOrder(userDto));
+        userAnalyticsDtoGet.setTodayQty(dashBoardService.getTodayOrder(userDto));
+        userAnalyticsDtoGet.setMonthQty(dashBoardService.getTotalOrder(userDto));
+        userAnalyticsDtoGet.setDeliveredQty(dashBoardService.getConformOrderByUser(userDto));
+        userAnalyticsDtoGet.setReturnQty(dashBoardService.getCancelOrderByUser(userDto));
 //        userAnalyticsDtoGet.setTotalSale();
         return ResponseEntity.ok(ApiResponse.success(userAnalyticsDtoGet));
     }

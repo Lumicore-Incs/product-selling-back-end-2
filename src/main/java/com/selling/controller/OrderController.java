@@ -57,7 +57,6 @@ public class OrderController {
         return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
       }
       UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
-      System.out.println(userDto.getRole());
       if (Objects.equals(userDto.getRole(), "SUPER USER") || Objects.equals(userDto.getRole(), "ADMIN")) {
         PaginationResponse<OrderDtoGet> response = orderService.getAllTodayOrderPaginated(page, size, search, status,
             productId);

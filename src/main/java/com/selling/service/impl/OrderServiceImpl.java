@@ -354,7 +354,6 @@ public class OrderServiceImpl implements OrderService {
       return response;
 
     } catch (Exception e) {
-      System.out.println("Error fetching paginated orders: " + e.getMessage());
       throw new RuntimeException("Error fetching paginated orders", e);
     }
   }
@@ -422,7 +421,6 @@ public class OrderServiceImpl implements OrderService {
         return lastStatus;
       } else {
         // Don't return "NotFound" - preserve existing status when API has no data
-        System.out.println("No tracking history found for ID: " + id);
         return null; // Return null to indicate "no update needed"
       }
 
@@ -544,7 +542,6 @@ public class OrderServiceImpl implements OrderService {
       if (order.getStatus().equals("PENDING") || order.getStatus().equals("TEMPORARY")) {
         List<OrderDetails> details = orderDetailsRepo.findByOrder(order);
         if (details != null && !details.isEmpty()) {
-          System.out.println("delete");
           orderDetailsRepo.deleteAll(details);
         }
         orderRepo.delete(order);

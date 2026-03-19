@@ -34,7 +34,6 @@ public class SummaryController {
                 month = java.time.LocalDate.now().getMonthValue(); // current month (1-12)
             }
 
-            
             UserSummeryGet entities = summaryService.getSummaryDetails(id, month);
 
             return new ResponseEntity<>(entities, HttpStatus.OK);

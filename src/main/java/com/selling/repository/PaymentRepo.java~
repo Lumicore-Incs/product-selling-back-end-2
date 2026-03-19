@@ -13,4 +13,5 @@ public interface PaymentRepo extends JpaRepository<Payment, Long> {
 
     Optional<Payment> findByUserId(Long userId);
 
+    Connect.Builder findAllOrOrderByIdDesc();
 }

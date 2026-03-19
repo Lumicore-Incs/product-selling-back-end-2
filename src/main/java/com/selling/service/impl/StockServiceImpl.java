@@ -110,18 +110,11 @@ public class StockServiceImpl implements StockService {
                 stockRepo.save(stock);
             }
         }
-
-        if (remainingQty > 0) {
-            System.out.println("Warning: Not enough stock to deduct full quantity. Remaining: " + remainingQty);
-        } else {
-            System.out.println("Stock updated successfully.");
-        }
     }
 
 
     @Override
     public void updateStockQty(List<OrderDetails> details) {
-        System.out.println("okkkzzzz");
 //        for (OrderDetails detail : details) {
 //            List<Stock> allByType = stockRepo.findAllByType(detail.getProduct().getName());
 //            System.out.println("all : "+ allByType);

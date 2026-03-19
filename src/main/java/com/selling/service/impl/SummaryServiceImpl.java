@@ -26,11 +26,6 @@ public class SummaryServiceImpl implements SummaryService {
 
     @Override
     public UserSummeryGet getSummaryDetails(Integer id, Integer month) {
-//   private Integer totalOrders;
-//     private Integer totalItem;
-//     private Integer deleverd;
-//     private BigDecimal total;
-//     private List<UserSummeryDetailsGet> summery;
 
         // Calculate date range: 15th of (month-1) to 15th of (month)
         int currentYear = LocalDate.now().getYear();

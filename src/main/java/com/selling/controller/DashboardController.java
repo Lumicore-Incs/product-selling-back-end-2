@@ -159,19 +159,4 @@ public class DashboardController {
               HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
-
-  @GetMapping("/getUserDetails/{id}")
-  public ResponseEntity<Object> getUserDetails(@RequestHeader(name = "Authorization") String authorizationHeader, @PathVariable("id") Long id) {
-    try {
-      if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
-        return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
-      }
-      GetUserDetailsDto entities = dashBoardService.getUserDetails(id);
-      return new ResponseEntity<>(entities, HttpStatus.OK);
-
-    } catch (Exception e) {
-      return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
-              HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-  }
 }
