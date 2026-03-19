@@ -48,6 +48,9 @@ public class User {
   @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<Salary> salaries;
 
+  @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<Payment> payments;
+
   public User(Long id, String name, String email, String telephone, String role, String registration_date,
       String status, String type, String password) {
     this.id = id;

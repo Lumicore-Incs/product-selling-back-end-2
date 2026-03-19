@@ -70,7 +70,7 @@ public class DashboardController {
 
   @GetMapping("/excel/{name}")
   public ResponseEntity<Object> exportToExcel(@RequestHeader(name = "Authorization") String authorizationHeader,
-      @PathVariable String name) {
+      @PathVariable("name") String name) {
     try {
       if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
         return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
@@ -146,27 +146,12 @@ public class DashboardController {
   }
 
   @GetMapping("/exportData/{name}")
-  public ResponseEntity<Object> getAndExportToOrder(@RequestHeader(name = "Authorization") String authorizationHeader, @PathVariable String name) {
+  public ResponseEntity<Object> getAndExportToOrder(@RequestHeader(name = "Authorization") String authorizationHeader, @PathVariable("name") String name) {
     try {
       if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
         return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
       }
       List<ExcelTypeDto> entities = dashBoardService.findOrder(name);
-      return new ResponseEntity<>(entities, HttpStatus.OK);
-
-    } catch (Exception e) {
-      return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
-              HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-  }
-
-  @GetMapping("/getUserDetails/{id}")
-  public ResponseEntity<Object> getUserDetails(@RequestHeader(name = "Authorization") String authorizationHeader, @PathVariable Long id) {
-    try {
-      if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
-        return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
-      }
-      GetUserDetailsDto entities = dashBoardService.getUserDetails(id);
       return new ResponseEntity<>(entities, HttpStatus.OK);
 
     } catch (Exception e) {

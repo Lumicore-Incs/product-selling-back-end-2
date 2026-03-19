@@ -31,7 +31,6 @@ public class DailyCountServiceImpl implements DailyCountService {
         DailyCountDtoGet map = modelMapper.map(dailyCount, DailyCountDtoGet.class);
         ArrayList<DailyCountDetailsDtoGet> objects = new ArrayList<>();
         for (DailyCountDetails dailyCountDetails : dailyCount.getDailyCountDetails()) {
-            System.out.println("o");
             objects.add(modelMapper.map(dailyCountDetails, DailyCountDetailsDtoGet.class));
         }
         map.setDailyCountDetailsDtoGet(objects);

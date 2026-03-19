@@ -47,8 +47,8 @@ public class DailyCountController {
     @GetMapping("/daily-count/paginated")
     public ResponseEntity<Object> getDailyCountByDatePaginated(
             @RequestHeader(name = "Authorization") String authorizationHeader,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "10") int size) {
         try {
             if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
                 return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);

@@ -47,17 +47,16 @@ public class OrderController {
   @GetMapping
   public ResponseEntity<Object> getAllTodayCustomer(
       @RequestHeader(name = "Authorization") String authorizationHeader,
-      @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "10") int size,
-      @RequestParam(required = false) String search,
-      @RequestParam(required = false) String status,
-      @RequestParam(required = false) Integer productId) {
+      @RequestParam(name = "page", defaultValue = "0") int page,
+      @RequestParam(name = "size", defaultValue = "10") int size,
+      @RequestParam(name = "search", required = false) String search,
+      @RequestParam(name = "status", required = false) String status,
+      @RequestParam(name = "productId", required = false) Integer productId) {
     try {
       if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
         return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
       }
       UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
-      System.out.println(userDto.getRole());
       if (Objects.equals(userDto.getRole(), "SUPER USER") || Objects.equals(userDto.getRole(), "ADMIN")) {
         PaginationResponse<OrderDtoGet> response = orderService.getAllTodayOrderPaginated(page, size, search, status,
             productId);
@@ -76,7 +75,7 @@ public class OrderController {
   @PutMapping("/{id}/duplicate")
   public ResponseEntity<Object> resolveDuplicateOrder(
       @RequestHeader(name = "Authorization") String authorizationHeader,
-      @PathVariable Integer id, @RequestBody @Valid CustomerRequestDTO requestDTO) {
+      @PathVariable("id") Integer id, @RequestBody @Valid CustomerRequestDTO requestDTO) {
     try {
       if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -96,11 +95,11 @@ public class OrderController {
   @GetMapping("/allCustomer")
   public ResponseEntity<Object> getAllCustomer(
       @RequestHeader(name = "Authorization") String authorizationHeader,
-      @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "10") int size,
-      @RequestParam(required = false) String search,
-      @RequestParam(required = false) String status,
-      @RequestParam(required = false) Integer productId) {
+      @RequestParam(name = "page", defaultValue = "0") int page,
+      @RequestParam(name = "size", defaultValue = "10") int size,
+      @RequestParam(name = "search", required = false) String search,
+      @RequestParam(name = "status", required = false) String status,
+      @RequestParam(name = "productId", required = false) Integer productId) {
     try {
       if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
         return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
@@ -141,7 +140,7 @@ public class OrderController {
 
   @DeleteMapping("/{id}")
   public ResponseEntity<Object> deleteOrder(@RequestHeader(name = "Authorization") String authorizationHeader,
-      @PathVariable Integer id) {
+      @PathVariable("id") Integer id) {
     try {
       if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -180,8 +179,8 @@ public class OrderController {
   @GetMapping("/getUrgentOrders")
   public ResponseEntity<Object> getUrgentOrders(
       @RequestHeader(name = "Authorization") String authorizationHeader,
-      @RequestParam Long id,
-      @RequestParam String date) {
+      @RequestParam("id") Long id,
+      @RequestParam("date") String date) {
 
     try {
       if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {

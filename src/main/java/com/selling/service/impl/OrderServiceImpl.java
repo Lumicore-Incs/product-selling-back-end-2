@@ -11,6 +11,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import com.selling.model.Order;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Async;
@@ -30,12 +31,9 @@ import com.selling.dto.TrackingDto;
 import com.selling.dto.UserDto;
 import com.selling.dto.get.OrderDetailsDtoGet;
 import com.selling.dto.get.OrderDtoGet;
-import com.selling.model.Customer;
-import com.selling.model.Order;
 import com.selling.model.OrderDetails;
 import com.selling.model.Product;
 import com.selling.model.User;
-import com.selling.repository.CustomerRepo;
 import com.selling.repository.OrderDetailsRepo;
 import com.selling.repository.OrderRepo;
 import com.selling.repository.ProductRepo;
@@ -53,7 +51,6 @@ public class OrderServiceImpl implements OrderService {
   private final MapperService mapperService;
   private final ProductRepo productRepository;
   private final StockService stockService;
-  private final CustomerRepo customerRepo;
   private final RestTemplate restTemplate;
 
   @Override
@@ -357,7 +354,6 @@ public class OrderServiceImpl implements OrderService {
       return response;
 
     } catch (Exception e) {
-      System.out.println("Error fetching paginated orders: " + e.getMessage());
       throw new RuntimeException("Error fetching paginated orders", e);
     }
   }
@@ -425,7 +421,6 @@ public class OrderServiceImpl implements OrderService {
         return lastStatus;
       } else {
         // Don't return "NotFound" - preserve existing status when API has no data
-        System.out.println("No tracking history found for ID: " + id);
         return null; // Return null to indicate "no update needed"
       }
 
@@ -542,12 +537,11 @@ public class OrderServiceImpl implements OrderService {
       if (order == null) {
         throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found");
       }
-      Customer customer = order.getCustomer();
+      // Customer customer = order.getCustomer();
 
       if (order.getStatus().equals("PENDING") || order.getStatus().equals("TEMPORARY")) {
         List<OrderDetails> details = orderDetailsRepo.findByOrder(order);
         if (details != null && !details.isEmpty()) {
-          System.out.println("delete");
           orderDetailsRepo.deleteAll(details);
         }
         orderRepo.delete(order);
@@ -558,11 +552,9 @@ public class OrderServiceImpl implements OrderService {
       return null;
 
     } catch (ResponseStatusException rse) {
-      System.out.println("ok " + rse.getMessage());
       throw rse;
     } catch (Exception e) {
       throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error deleting order: " + e.getMessage());
     }
   }
-
 }

@@ -2,7 +2,6 @@ package com.selling.service;
 
 import com.selling.dto.UserDto;
 import com.selling.dto.get.ExcelTypeDto;
-import com.selling.dto.get.GetUserDetailsDto;
 
 import java.util.List;
 
@@ -17,7 +16,9 @@ public interface DashBoardService {
 
     int getConformOrder(UserDto user);
 
+    int getConformOrderByUser(UserDto user);
+
     int getCancelOrder(UserDto user);
 
-    GetUserDetailsDto getUserDetails(Long id);
+    int getCancelOrderByUser(UserDto user);
 }

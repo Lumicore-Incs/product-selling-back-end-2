@@ -4,12 +4,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.sql.Date;
 
-import com.selling.dto.OrderDto;
-import com.selling.dto.get.GetUserDetailsDto;
 import com.selling.model.*;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +23,8 @@ import com.selling.repository.ProductRepo;
 import com.selling.service.DashBoardService;
 
 import lombok.RequiredArgsConstructor;
+
+
 
 @Service
 @RequiredArgsConstructor
@@ -103,7 +102,6 @@ public class DashBoardServiceImpl implements DashBoardService {
             return excelTypeDtos;
 
         } catch (Exception e) {
-            System.out.println("message is : " + e.getMessage());
             return null;
         }
     }
@@ -196,6 +194,7 @@ public class DashBoardServiceImpl implements DashBoardService {
         LocalDateTime startDateTime = startDate.atStartOfDay();
 
         if (user.getRole().equals("SUPER USER") || user.getRole().equals("ADMIN")) {
+            
             return Math.toIntExact(orderRepo.sumQtyAfterDate(startDateTime));
         }
 
@@ -243,13 +242,14 @@ public class DashBoardServiceImpl implements DashBoardService {
         }
 
         LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = LocalDateTime.now();
 
         if (user.getRole().equals("SUPER USER") || user.getRole().equals("ADMIN")) {
-            return Math.toIntExact(orderRepo.countByStatusAndDateBetween("Delivered", startDateTime));
+            return Math.toIntExact(orderRepo.countByStatusAndDateRange("Delivered", startDateTime, endDateTime));
         }
 
-        return Math.toIntExact(orderRepo.countByCustomerUserEmailAndStatusAndDateBetween(
-                "Delivered", user.getId(), startDateTime));
+        return Math.toIntExact(orderRepo.countByCustomerUserIdAndStatusAndDateBetween(
+                user.getId(), "Delivered", startDateTime, endDateTime));
     }
 
     @Override
@@ -270,26 +270,63 @@ public class DashBoardServiceImpl implements DashBoardService {
         }
 
         LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = LocalDateTime.now();
 
         if (user.getRole().equals("SUPER USER") || user.getRole().equals("ADMIN")) {
-            return Math.toIntExact(orderRepo.countByStatusAndDateBetween(cancelStatus, startDateTime));
+            return Math.toIntExact(orderRepo.countByStatusAndDateRange(cancelStatus, startDateTime, endDateTime));
         }
 
-        return Math.toIntExact(orderRepo.countByCustomerUserEmailAndStatusAndDateBetween(
-                cancelStatus, user.getId(), startDateTime));
+        return Math.toIntExact(orderRepo.countByCustomerUserIdAndStatusAndDateBetween(
+                user.getId(), cancelStatus, startDateTime, endDateTime));
+    }
+
+
+    @Override
+    public int getConformOrderByUser(UserDto user) {
+
+        LocalDate today = LocalDate.now();
+
+        LocalDate startDate;
+
+        if (today.getDayOfMonth() >= 15) {
+            // This month 15
+            startDate = LocalDate.of(today.getYear(), today.getMonth(), 15);
+        } else {
+            // Previous month 15
+            LocalDate previousMonth = today.minusMonths(1);
+            startDate = LocalDate.of(previousMonth.getYear(), previousMonth.getMonth(), 15);
+        }
+
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = LocalDateTime.now();
+        
+        long resultCount = orderRepo.countByCustomerUserIdAndStatusAndDateBetween(
+                user.getId(), "Delivered", startDateTime, endDateTime);
+
+        return Math.toIntExact(resultCount);
     }
 
     @Override
-    public GetUserDetailsDto getUserDetails(Long id) {
-        List<Order> byUserId = orderRepo.findByUserId(id);
-        System.out.println(byUserId.size());
-        GetUserDetailsDto getUserDetailsDto = new GetUserDetailsDto();
-        List<OrderDto> allData = new ArrayList<>();
-        for (Order order:byUserId){
-            allData.add(modelMapper.map(order, OrderDto.class));
+    public int getCancelOrderByUser(UserDto user) {
+
+        LocalDate today = LocalDate.now();
+        String cancelStatus = "Returned to Client";
+
+        LocalDate startDate;
+
+        if (today.getDayOfMonth() >= 15) {
+            // This month 15
+            startDate = LocalDate.of(today.getYear(), today.getMonth(), 15);
+        } else {
+            // Previous month 15
+            LocalDate previousMonth = today.minusMonths(1);
+            startDate = LocalDate.of(previousMonth.getYear(), previousMonth.getMonth(), 15);
         }
-        getUserDetailsDto.setOrder(allData);
-        //add income---------------------------------------------------
-        return getUserDetailsDto;
+
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = LocalDateTime.now();
+        
+        return Math.toIntExact(orderRepo.countByCustomerUserIdAndStatusAndDateBetween(
+                user.getId(), cancelStatus, startDateTime, endDateTime));
     }
 }

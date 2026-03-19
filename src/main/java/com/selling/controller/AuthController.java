@@ -94,7 +94,7 @@ public class AuthController {
   }
 
   @PutMapping("/update/{userId}")
-  public ResponseEntity<Object> updateUser(@PathVariable Long userId, @RequestBody UserDto userDto,
+  public ResponseEntity<Object> updateUser(@PathVariable("userId") Long userId, @RequestBody UserDto userDto,
                                            @RequestHeader(name = "Authorization") String authorizationHeader) {
     if (this.jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
       UserDtoForGet dto = this.userService.updateUser(userDto, userId);
@@ -122,7 +122,7 @@ public class AuthController {
   }
 
   @PostMapping("/send")
-  public String sendOtp(@RequestParam String email) {
+  public String sendOtp(@RequestParam("email") String email) {
     boolean isSave = userService.sendOtpToEmail(email);
     if (isSave) {
       return "OTP sent successfully to " + email;
@@ -132,7 +132,7 @@ public class AuthController {
   }
 
   @PostMapping("/validate")
-  public String validateOtp(@RequestParam String email, @RequestParam String otp) {
+  public String validateOtp(@RequestParam("email") String email, @RequestParam("otp") String otp) {
     boolean isValid = userService.validateOtp(email, otp);
     if (isValid) {
       return "OTP is valid";
@@ -158,7 +158,7 @@ public class AuthController {
 
   @DeleteMapping("/{id}")
   public ResponseEntity<Object> deleteUser(@RequestHeader(name = "Authorization") String authorizationHeader,
-      @PathVariable Integer id) {
+      @PathVariable("id") Integer id) {
     try {
       if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
         return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);

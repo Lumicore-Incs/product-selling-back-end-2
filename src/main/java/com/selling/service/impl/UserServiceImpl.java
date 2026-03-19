@@ -114,10 +114,8 @@ public class UserServiceImpl implements UserService {
       userDto.setProductId(userDto.getProductId());
       userDto.setStatus(userDto.getStatus());
       if (userDto.getPassword()==null){
-        System.out.println("1");
         userDto.setPassword(byId.getPassword());
       }else {
-        System.out.println("2");
         userDto.setPassword(passwordEncoder.encode(userDto.getPassword()));
       }
       User user = mapperService.map(userDto, User.class);
@@ -167,8 +165,6 @@ public class UserServiceImpl implements UserService {
       }
       return false;
     } catch (Exception e) {
-      System.out.println("============");
-      System.out.println(e.getMessage());
       return false;
     }
   }

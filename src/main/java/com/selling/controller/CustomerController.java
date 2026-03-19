@@ -80,7 +80,7 @@ public class CustomerController {
 
   @DeleteMapping("/{id}")
   public ResponseEntity<Object> deleteCustomer(@RequestHeader(name = "Authorization") String authorizationHeader,
-      @PathVariable Integer id) {
+      @PathVariable("id") Integer id) {
     try {
       if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
         return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
@@ -100,7 +100,7 @@ public class CustomerController {
   @PutMapping("/{id}")
   public ResponseEntity<Object> updateCustomer(
       @RequestHeader(name = "Authorization") String authorizationHeader,
-      @PathVariable Integer id,
+      @PathVariable("id") Integer id,
       @RequestBody CustomerRequestDTO requestDTO) {
     try {
       if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {

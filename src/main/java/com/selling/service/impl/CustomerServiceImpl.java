@@ -93,7 +93,6 @@ public class CustomerServiceImpl implements CustomerService {
 
   // 2. Create and Save Order
   private Object createNewOrder(CustomerRequestDTO requestDTO, Optional<Customer> opt, UserDto userDto) {
-    System.out.println("4");
     Order order = new Order();
     order.setCustomer(opt.get());
     if (userDto != null) {
@@ -185,16 +184,12 @@ public class CustomerServiceImpl implements CustomerService {
       Customer customer = customerOptional.get();
       List<Order> orders = customer.getOrders();
       Order lastOrder = orders.get(orders.size() - 1);
-      List<OrderDetails> orderDetails = lastOrder.getOrderDetails();
+      lastOrder.getOrderDetails();
       orderRepository.deleteById(lastOrder.getOrderId());
       return true;
     }else {
       return false;
     }
-  }
-
-  private String generateTrackingId() {
-    return "TRK" + System.currentTimeMillis();
   }
 
   @Override
@@ -216,7 +211,6 @@ public class CustomerServiceImpl implements CustomerService {
         customer.setStatus("TEMPORARY");
 
         Customer saved = customerRepository.save(customer);
-        System.out.println("okzzzzz...");
         return mapperService.map(saved, CustomerDtoGet.class);
       } else {
         throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Customer not found");

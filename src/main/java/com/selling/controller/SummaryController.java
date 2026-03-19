@@ -23,8 +23,8 @@ public class SummaryController {
 
     @GetMapping("/getUserDetails")
     public ResponseEntity<Object> getSummaryDetails(@RequestHeader(name = "Authorization") String authorizationHeader,
-            @RequestParam(required = false) Integer id,
-            @RequestParam(required = false) Integer month) {
+            @RequestParam(name = "id", required = false) Integer id,
+            @RequestParam(name = "month", required = false) Integer month) {
         try {
             if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
                 return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
@@ -34,7 +34,6 @@ public class SummaryController {
                 month = java.time.LocalDate.now().getMonthValue(); // current month (1-12)
             }
 
-            
             UserSummeryGet entities = summaryService.getSummaryDetails(id, month);
 
             return new ResponseEntity<>(entities, HttpStatus.OK);

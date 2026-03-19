@@ -4,8 +4,6 @@ import java.sql.Date;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import com.selling.model.DailyCountDetails;
-import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
