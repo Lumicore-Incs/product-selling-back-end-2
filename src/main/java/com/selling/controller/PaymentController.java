@@ -3,7 +3,11 @@ package com.selling.controller;
 import com.selling.dto.ApiResponse;
 import com.selling.dto.PaymentDTO;
 import com.selling.dto.PaymentDetailsDTO;
+import com.selling.dto.UserDto;
+import com.selling.dto.get.UserAnalyticsDtoGet;
+import com.selling.service.DashBoardService;
 import com.selling.service.PaymentService;
+import com.selling.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +27,12 @@ public class PaymentController {
     private JWTTokenGenerator jwtTokenGenerator;
     @Autowired
     private final PaymentService paymentService;
-    
+    @Autowired
+    private final DashBoardService dashBoardService;
+    @Autowired
+    private UserService userService;
+
+
 
     @PostMapping
     public ResponseEntity<ApiResponse<PaymentDTO>> createPayment(
@@ -41,7 +50,7 @@ public class PaymentController {
     }
 
     @GetMapping("/{userId}")
-    public ResponseEntity<ApiResponse<PaymentDTO>> getPaymentById(@RequestHeader(name = "Authorization") String authorizationHeader, @PathVariable Long userId) {
+    public ResponseEntity<ApiResponse<PaymentDTO>> getPaymentById(@RequestHeader(name = "Authorization") String authorizationHeader, @PathVariable("userId") Long userId) {
          try {
             if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Invalid token", 401));
@@ -70,7 +79,7 @@ public class PaymentController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<PaymentDTO>> updatePayment(@RequestHeader(name = "Authorization") String authorizationHeader, @PathVariable Long id,
+    public ResponseEntity<ApiResponse<PaymentDTO>> updatePayment(@RequestHeader(name = "Authorization") String authorizationHeader, @PathVariable("id") Long id,
             @RequestBody PaymentDTO paymentDTO) {
                  try {
             if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
@@ -85,7 +94,7 @@ public class PaymentController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deletePayment(@RequestHeader(name = "Authorization") String authorizationHeader, @PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deletePayment(@RequestHeader(name = "Authorization") String authorizationHeader, @PathVariable("id") Long id) {
          try {
             if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Invalid token", 401));
@@ -117,7 +126,7 @@ public class PaymentController {
     }
 
     @DeleteMapping("/details/{id}")
-    public ResponseEntity<ApiResponse<Void>> deletePaymentDetails(@RequestHeader(name = "Authorization") String authorizationHeader, @PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deletePaymentDetails(@RequestHeader(name = "Authorization") String authorizationHeader, @PathVariable("id") Long id) {
         try {
             if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Invalid token", 401));
@@ -131,7 +140,7 @@ public class PaymentController {
     }
 
     @PutMapping("/Details/{id}")
-    public ResponseEntity<ApiResponse<PaymentDetailsDTO>> updatePaymentDetails(@RequestHeader(name = "Authorization") String authorizationHeader, @PathVariable Long id,
+    public ResponseEntity<ApiResponse<PaymentDetailsDTO>> updatePaymentDetails(@RequestHeader(name = "Authorization") String authorizationHeader, @PathVariable("id") Long id,
                                                                  @RequestBody PaymentDetailsDTO dto) {
         try {
             if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
@@ -143,5 +152,30 @@ public class PaymentController {
             return new ResponseEntity<>(ApiResponse.error("Error retrieving products: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value()),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+
+
+
+    //==============payment details ==================
+
+    @GetMapping("/qty/{id}")
+    public ResponseEntity<ApiResponse<UserAnalyticsDtoGet>> getAllDetails(@RequestHeader(name = "Authorization") String authorizationHeader, @PathVariable("id") Long id) {
+        try {
+            if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Invalid token", 401));
+            }
+        } catch (Exception e) {
+            return new ResponseEntity<>(ApiResponse.error("Error retrieving products: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value()),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        UserDto userDto = userService.getUserById(String.valueOf(id));
+        UserAnalyticsDtoGet userAnalyticsDtoGet = new UserAnalyticsDtoGet();
+        userAnalyticsDtoGet.setTodayQty(dashBoardService.getTotalOrder(userDto));
+        userAnalyticsDtoGet.setMonthQty(dashBoardService.getTodayOrder(userDto));
+        userAnalyticsDtoGet.setDeliveredQty(dashBoardService.getConformOrder(userDto));
+        userAnalyticsDtoGet.setReturnQty(dashBoardService.getCancelOrder(userDto));
+//        userAnalyticsDtoGet.setTotalSale();
+        return ResponseEntity.ok(ApiResponse.success(userAnalyticsDtoGet));
     }
 }

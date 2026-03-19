@@ -58,7 +58,7 @@ public class StockController {
     @PutMapping("/{id}")
     public ResponseEntity<Object> updateStock(
             @RequestHeader(name = "Authorization") String authorizationHeader,
-            @PathVariable Integer id,
+            @PathVariable("id") Integer id,
             @RequestBody StockDto stockDto) {
         try {
             if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
@@ -79,7 +79,7 @@ public class StockController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> deleteStock(
             @RequestHeader(name = "Authorization") String authorizationHeader,
-            @PathVariable Integer id) {
+            @PathVariable("id") Integer id) {
         try {
             if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
                 return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
@@ -101,7 +101,7 @@ public class StockController {
     @GetMapping("/{id}")
     public ResponseEntity<Object> getStockById(
             @RequestHeader(name = "Authorization") String authorizationHeader,
-            @PathVariable Integer id) {
+            @PathVariable("id") Integer id) {
         try {
             if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
                 return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);

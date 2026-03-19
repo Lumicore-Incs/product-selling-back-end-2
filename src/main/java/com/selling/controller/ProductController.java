@@ -53,7 +53,7 @@ public class ProductController {
   @GetMapping("/{id}")
   public ResponseEntity<Object> getProductById(
       @RequestHeader(name = "Authorization") String authorizationHeader,
-      @PathVariable Integer id) {
+      @PathVariable("id") Integer id) {
     try {
       if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
         return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
@@ -86,7 +86,7 @@ public class ProductController {
   @PutMapping("/{id}")
   public ResponseEntity<Object> updateProduct(
       @RequestHeader(name = "Authorization") String authorizationHeader,
-      @PathVariable Integer id,
+      @PathVariable("id") Integer id,
       @RequestBody ProductDto productDTO) {
     try {
       if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
@@ -107,7 +107,7 @@ public class ProductController {
   @DeleteMapping("/{id}")
   public ResponseEntity<Object> deleteProduct(
       @RequestHeader(name = "Authorization") String authorizationHeader,
-      @PathVariable Integer id) {
+      @PathVariable("id") Integer id) {
     try {
       if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
         return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
@@ -127,9 +127,9 @@ public class ProductController {
   @GetMapping("/search")
   public ResponseEntity<Object> searchProducts(
       @RequestHeader(name = "Authorization") String authorizationHeader,
-      @RequestParam(required = false) String name,
-      @RequestParam(required = false) BigDecimal minPrice,
-      @RequestParam(required = false) BigDecimal maxPrice) {
+      @RequestParam(name = "name", required = false) String name,
+      @RequestParam(name = "minPrice", required = false) BigDecimal minPrice,
+      @RequestParam(name = "maxPrice", required = false) BigDecimal maxPrice) {
     try {
       if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
         return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);

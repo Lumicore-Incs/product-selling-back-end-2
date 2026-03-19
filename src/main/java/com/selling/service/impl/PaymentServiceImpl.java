@@ -14,7 +14,6 @@ import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -139,7 +138,8 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     public PaymentDetailsDTO createPaymentDetails(PaymentDetailsDTO paymentDTO) {
         PaymentDetails map = modelMapper.map(paymentDTO, PaymentDetails.class);
-
+        Optional<Payment> byId = paymentRepo.findById(paymentDTO.getPaymentId());
+        byId.ifPresent(map::setPayment);
         PaymentDetails savedPayment = paymentDetailsRepo.save(map);
         return modelMapper.map(savedPayment, PaymentDetailsDTO.class);
     }
