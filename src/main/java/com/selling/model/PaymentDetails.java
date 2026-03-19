@@ -26,6 +26,8 @@ public class PaymentDetails {
 
     private Double totalAmount;
 
+    private String status;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "payment_id")
     private Payment payment;

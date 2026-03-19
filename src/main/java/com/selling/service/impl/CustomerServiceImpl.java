@@ -185,16 +185,12 @@ public class CustomerServiceImpl implements CustomerService {
       Customer customer = customerOptional.get();
       List<Order> orders = customer.getOrders();
       Order lastOrder = orders.get(orders.size() - 1);
-      List<OrderDetails> orderDetails = lastOrder.getOrderDetails();
+      lastOrder.getOrderDetails();
       orderRepository.deleteById(lastOrder.getOrderId());
       return true;
     }else {
       return false;
     }
-  }
-
-  private String generateTrackingId() {
-    return "TRK" + System.currentTimeMillis();
   }
 
   @Override

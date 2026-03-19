@@ -15,5 +15,6 @@ public class PaymentDetailsDTO {
     private Integer monthlyQty;
     private Double totalCommission;
     private Double totalAmount;
+    private String status;
     private Long paymentId;
 }

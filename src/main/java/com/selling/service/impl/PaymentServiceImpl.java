@@ -14,7 +14,9 @@ import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,9 +24,9 @@ import java.util.stream.Collectors;
 public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepo paymentRepo;
-    private final PaymentDetailsRepo paymentDetailsRepo;
     private final UserRepo userRepo;
     private final ModelMapper modelMapper;
+    private final PaymentDetailsRepo paymentDetailsRepo;
 
     @Override
     @Transactional
@@ -51,17 +53,29 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    public PaymentDTO getPaymentById(Long id) {
-        Payment payment = paymentRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Payment not found with id: " + id));
-        return mapToDTO(payment);
+    public PaymentDTO getPaymentByUserId(Long userId) {
+        try {
+            Optional<Payment> byUserId = paymentRepo.findByUserId(userId);
+            if (byUserId.isPresent()) {
+                Payment payment = byUserId.get();
+                return mapToDTO(payment);
+            } else {
+                return null;
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error retrieving payment: " + e.getMessage());
+        }
     }
 
     @Override
     public List<PaymentDTO> getAllPayments() {
-        return paymentRepo.findAll().stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
+        try {
+            return paymentRepo.findAll().stream()
+                    .map(this::mapToDTO)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new RuntimeException("Error retrieving payments: " + e.getMessage());
+        }
     }
 
     @Override
@@ -118,5 +132,38 @@ public class PaymentServiceImpl implements PaymentService {
                     }).collect(Collectors.toList()));
         }
         return dto;
+    }
+
+
+    //==============payment details ==================
+    @Override
+    public PaymentDetailsDTO createPaymentDetails(PaymentDetailsDTO paymentDTO) {
+        PaymentDetails map = modelMapper.map(paymentDTO, PaymentDetails.class);
+
+        PaymentDetails savedPayment = paymentDetailsRepo.save(map);
+        return modelMapper.map(savedPayment, PaymentDetailsDTO.class);
+    }
+
+    @Override
+    @Transactional
+    public void deletePaymentDetails(Long id) {
+        if (!paymentDetailsRepo.existsById(id)) {
+            throw new RuntimeException("Payment not found with id: " + id);
+        }
+        paymentDetailsRepo.deleteById(id);
+    }
+
+    @Override
+    public PaymentDetailsDTO updatePaymentDetails(Long id, PaymentDetailsDTO paymentDTO) {
+        PaymentDetails existingPayment = paymentDetailsRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Payment not found with id: " + id));
+        existingPayment.setDate(paymentDTO.getDate());
+        existingPayment.setMonthlyQty(paymentDTO.getMonthlyQty());
+        existingPayment.setTotalCommission(paymentDTO.getTotalCommission());
+        existingPayment.setStatus(paymentDTO.getStatus());
+        existingPayment.setTotalAmount(paymentDTO.getTotalAmount());
+
+        PaymentDetails updatedPayment = paymentDetailsRepo.save(existingPayment);
+        return modelMapper.map(updatedPayment, PaymentDetailsDTO.class);
     }
 }

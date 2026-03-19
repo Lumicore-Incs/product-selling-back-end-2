@@ -11,6 +11,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import com.selling.model.Order;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Async;
@@ -30,8 +31,6 @@ import com.selling.dto.TrackingDto;
 import com.selling.dto.UserDto;
 import com.selling.dto.get.OrderDetailsDtoGet;
 import com.selling.dto.get.OrderDtoGet;
-import com.selling.model.Customer;
-import com.selling.model.Order;
 import com.selling.model.OrderDetails;
 import com.selling.model.Product;
 import com.selling.model.User;
@@ -540,7 +539,7 @@ public class OrderServiceImpl implements OrderService {
       if (order == null) {
         throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found");
       }
-      Customer customer = order.getCustomer();
+      // Customer customer = order.getCustomer();
 
       if (order.getStatus().equals("PENDING") || order.getStatus().equals("TEMPORARY")) {
         List<OrderDetails> details = orderDetailsRepo.findByOrder(order);
@@ -556,7 +555,6 @@ public class OrderServiceImpl implements OrderService {
       return null;
 
     } catch (ResponseStatusException rse) {
-      System.out.println("ok " + rse.getMessage());
       throw rse;
     } catch (Exception e) {
       throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error deleting order: " + e.getMessage());
