@@ -133,8 +133,6 @@ public class CustomerServiceImpl implements CustomerService {
           orderDetails.setQty(item.getQty());
           orderDetails.setTotal(item.getTotal());
 
-          stockService.updateStockByName(product.getName(), item.getQty());
-
           return orderDetails;
         })
         .collect(Collectors.toList());

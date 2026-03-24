@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.sql.Date;
 
 import com.selling.model.*;
+import com.selling.service.StockService;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -37,7 +38,7 @@ public class DashBoardServiceImpl implements DashBoardService {
     private final DailyCountRepo dailyCountRepo;
     private final DailyCountDetailsRepo dailyCountDetailsRepo;
     @Autowired
-    private ModelMapper modelMapper;
+    private StockService stockService;
 
     @Override
     public List<ExcelTypeDto> findOrder(String name) {
@@ -135,7 +136,11 @@ public class DashBoardServiceImpl implements DashBoardService {
                    List<OrderDetails> orderDetailsList = order.getOrderDetails();
                    if (orderDetailsList != null && !orderDetailsList.isEmpty()) {
                        for (OrderDetails orderDetail : orderDetailsList) {
+
                            Product product = orderDetail.getProduct();
+
+                           stockService.updateStockByName(product.getName(), orderDetail.getQty());
+
                            Integer productId = product.getProductId();
                            String productName = product.getName();
                            Integer qty = orderDetail.getQty();
