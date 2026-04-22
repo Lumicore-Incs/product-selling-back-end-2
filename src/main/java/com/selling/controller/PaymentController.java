@@ -171,6 +171,12 @@ public class PaymentController {
         }
         UserDto userDto = userService.getUserById(String.valueOf(id));
         UserAnalyticsDtoGet userAnalyticsDtoGet = new UserAnalyticsDtoGet();
+        if(userDto.getRole().equals("SUPER USER") || userDto.getRole().equals("ADMIN")){
+            userAnalyticsDtoGet.setTodayQty(0); 
+            userAnalyticsDtoGet.setMonthQty(0);
+            userAnalyticsDtoGet.setDeliveredQty(0);
+            userAnalyticsDtoGet.setReturnQty(0);
+        }
         userAnalyticsDtoGet.setTodayQty(dashBoardService.getTodayOrder(userDto));
         userAnalyticsDtoGet.setMonthQty(dashBoardService.getTotalOrder(userDto));
         userAnalyticsDtoGet.setDeliveredQty(dashBoardService.getConformOrderByUser(userDto));

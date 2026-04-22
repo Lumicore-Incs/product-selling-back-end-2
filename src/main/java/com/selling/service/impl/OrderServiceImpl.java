@@ -8,12 +8,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 import com.selling.model.*;
 import com.selling.repository.CustomerRepo;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Async;
@@ -37,7 +38,6 @@ import com.selling.repository.OrderDetailsRepo;
 import com.selling.repository.OrderRepo;
 import com.selling.repository.ProductRepo;
 import com.selling.service.OrderService;
-import com.selling.service.StockService;
 import com.selling.util.MapperService;
 
 import lombok.RequiredArgsConstructor;
@@ -49,9 +49,14 @@ public class OrderServiceImpl implements OrderService {
   private final OrderDetailsRepo orderDetailsRepo;
   private final MapperService mapperService;
   private final ProductRepo productRepository;
-  private final StockService stockService;
-  private final RestTemplate restTemplate;
   private final CustomerRepo customerRepo;
+
+  @Autowired
+  private RestTemplate restTemplate;
+
+  @Autowired
+  @Qualifier("orderExecutor")
+  private Executor orderExecutor;
 
   @Override
   public String generateOrderSerialNumber(Product product, UserDto userDto) {
@@ -256,20 +261,7 @@ public class OrderServiceImpl implements OrderService {
     return buildFilteredPaginatedResponse(userOrders, page, size, search, status, productId, false, null);
   }
 
-  /**
-   * Shared helper: filter + paginate a list of Order entities.
-   *
-   * @param source    raw list of orders to filter
-   * @param page      zero-based page number
-   * @param size      page size
-   * @param search    LIKE match against customerName, weyBillId, contact01,
-   *                  contact02
-   * @param status    exact match on order status (null → no filter)
-   * @param productId filter orders containing at least one detail for this
-   *                  product (null → no filter)
-   * @param todayOnly if true, restrict to orders whose date is today
-   * @param ignored   reserved (pass null)
-   */
+
   private PaginationResponse<OrderDtoGet> buildFilteredPaginatedResponse(
           List<Order> source, int page, int size,
           String search, String status, Integer productId,
@@ -358,76 +350,107 @@ public class OrderServiceImpl implements OrderService {
     }
   }
 
-  @Async
+  @Async("orderExecutor")
   @Override
   public void updateOrderDetails(UserDto userDto) {
-    List<Order> recentOrders = null;
-    if (userDto.getRole().equals("ADMIN") || userDto.getRole().equals("admin") || userDto.getRole().equals("super user")
-            || userDto.getRole().equals("SUPER USER")) {
+
+    List<Order> recentOrders;
+
+    if (isAdmin(userDto.getRole())) {
       recentOrders = orderRepo.findAllByOrderByOrderIdDesc();
     } else {
       recentOrders = orderRepo.findByUserIdOrderByOrderIdDesc(userDto.getId());
     }
 
-    // Process up to 5 orders in parallel
-    List<CompletableFuture<Void>> futures = recentOrders.stream()
-            .filter(order -> !(order.getStatus().equals("Delivered") || order.getStatus().equals("Failed to Deliver")
-                    || order.getStatus().equals("NotFound"))
-                    && !order.getTrackingId().equals("TRK"))
-            .map(order -> CompletableFuture.runAsync(() -> {
-              String value = checkTrackingStatus(order.getTrackingId());
-              if (value != null && !value.equals(order.getStatus())) {
-                order.setStatus(value);
-                order.setDeliveryDate(LocalDateTime.now());
-                orderRepo.save(order);
-              }
-            }))
+    // ✅ Filter valid orders
+    List<Order> filteredOrders = recentOrders.stream()
+            .filter(order -> isValidOrder(order))
             .collect(Collectors.toList());
 
-    // Wait for all to complete (with timeout)
-    CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-            .orTimeout(5, TimeUnit.MINUTES) // 5 minute timeout for all
-            .exceptionally(ex -> {
-              System.err.println("Error updating tracking status: " + ex.getMessage());
-              return null;
-            })
-            .join();
+    // ✅ Limit to 5 parallel threads
+    ExecutorService limitedExecutor = Executors.newFixedThreadPool(5);
+
+    try {
+      List<CompletableFuture<Void>> futures = filteredOrders.stream()
+              .map(order -> CompletableFuture.runAsync(() -> processOrder(order), limitedExecutor))
+              .collect(Collectors.toList());
+
+      // ✅ Wait with timeout
+      CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+              .orTimeout(5, TimeUnit.MINUTES)
+              .exceptionally(ex -> {
+                System.err.println("Error updating tracking status: " + ex.getMessage());
+                return null;
+              })
+              .join();
+
+    } finally {
+      limitedExecutor.shutdown(); // 🔥 important
+    }
   }
 
+  // 🔹 Process single order
+  private void processOrder(Order order) {
+    try {
+      String value = checkTrackingStatus(order.getTrackingId());
+
+      if (value != null && !value.equals(order.getStatus())) {
+        order.setStatus(value);
+        order.setDeliveryDate(LocalDateTime.now());
+        orderRepo.save(order);
+      }
+
+    } catch (Exception e) {
+      System.err.println("Error processing order " + order.getTrackingId() + ": " + e.getMessage());
+    }
+  }
+
+  // 🔹 Validation
+  private boolean isValidOrder(Order order) {
+    return !(order.getStatus().equals("Delivered")
+            || order.getStatus().equals("Failed to Deliver")
+            || order.getStatus().equals("NotFound"))
+            && !order.getTrackingId().equals("TRK");
+  }
+
+  // 🔹 Role check
+  private boolean isAdmin(String role) {
+    return role.equalsIgnoreCase("ADMIN")
+            || role.equalsIgnoreCase("SUPER USER");
+  }
+
+  // 🔥 API CALL (with timeout safe handling)
   private String checkTrackingStatus(String id) {
+
     String apiUrl = "https://api.transexpress.lk/api/v1/tracking?waybill_id=" + id;
 
     try {
       String response = restTemplate.getForObject(apiUrl, String.class);
-      JsonObject jsonResponse = JsonParser.parseString(response).getAsJsonObject();
 
+      JsonObject jsonResponse = JsonParser.parseString(response).getAsJsonObject();
       JsonArray dataArray = jsonResponse.getAsJsonArray("data");
-      String lastStatus = null;
 
       for (int i = 0; i < dataArray.size(); i++) {
         JsonObject dataItem = dataArray.get(i).getAsJsonObject();
+
         if ("tracking_history".equals(dataItem.get("key").getAsString())) {
+
           JsonArray historyArray = dataItem.getAsJsonArray("value");
 
           if (historyArray.size() > 0) {
-            JsonObject lastStatusItem = historyArray.get(historyArray.size() - 1).getAsJsonObject();
-            lastStatus = lastStatusItem.get("status_name").getAsString();
+            JsonObject lastStatusItem =
+                    historyArray.get(historyArray.size() - 1).getAsJsonObject();
+
+            return lastStatusItem.get("status_name").getAsString();
           }
-          break;
         }
       }
 
-      if (lastStatus != null) {
-        return lastStatus;
-      } else {
-        // Don't return "NotFound" - preserve existing status when API has no data
-        return null; // Return null to indicate "no update needed"
-      }
+      return null;
 
     } catch (Exception e) {
-      e.printStackTrace();
-      System.out.println("Error while calling API for tracking ID " + id + ": " + e.getMessage());
-      return null; // Don't update status on API exception
+      System.err.println("API error for tracking ID " + id + ": " + e.getMessage());
+      return null;
     }
   }
 
@@ -545,7 +568,6 @@ public class OrderServiceImpl implements OrderService {
           orderDetailsRepo.deleteAll(details);
         }
         orderRepo.delete(order);
-        stockService.updateStockQty(details);
         Optional<Customer> byId = customerRepo.findById(order.getCustomer().getCustomerId());
         if (byId.isPresent()) {
           Customer customer = byId.get();

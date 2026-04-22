@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
@@ -23,6 +24,8 @@ public class PaymentDetails {
     private Integer monthlyQty;
 
     private Double totalCommission;
+
+    private Double bonus;
 
     private Double totalAmount;
 

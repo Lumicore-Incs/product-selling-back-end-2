@@ -14,7 +14,9 @@ import lombok.ToString;
 @ToString
 public class UserSummeryDetailsGet {
     private LocalDateTime date;
+    private Integer orderQty;
     private Integer qty;
     private BigDecimal commission;
     private BigDecimal total;
+    private Double bonus;
 }

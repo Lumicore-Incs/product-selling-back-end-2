@@ -37,11 +37,6 @@ public class SummaryServiceImpl implements SummaryService {
         LocalDateTime endDate = LocalDateTime.of(currentYear, month, 15, 23, 59, 59);
 
         List<Order> orders = orderRepo.findByUserIdAndDateBetweenByStatus((long) id, startDate, endDate);
-        System.out.println("----------");
-        System.out.println(id);
-        System.out.println(startDate);
-        System.out.println(endDate);
-        System.out.println("----------");
         List<Order> ordersList = orderRepo.findByUserIdAndDateBetween((long) id, startDate, endDate);
 
         int totalOrders = ordersList.size();
@@ -79,13 +74,16 @@ public class SummaryServiceImpl implements SummaryService {
             if (groupedDetails.containsKey(orderDate)) {
                 UserSummeryDetailsGet existing = groupedDetails.get(orderDate);
                 existing.setQty(existing.getQty() + orderQty);
-                existing.setTotal(existing.getTotal().add(orderTotal));
+                BigDecimal currentTotal = existing.getTotal() != null ? existing.getTotal() : BigDecimal.ZERO;
+                existing.setTotal(currentTotal.add(orderTotal));
             } else {
                 UserSummeryDetailsGet detail = new UserSummeryDetailsGet();
                 Optional<Payment> byUserId = paymentRepo.findByUserId(order.getUser().getId());
                 // Set to start of day for consistency
                 detail.setDate(orderDate.atStartOfDay());
                 detail.setQty(orderQty);
+                detail.setCommission(BigDecimal.ZERO);
+                detail.setTotal(BigDecimal.ZERO);
                 if (byUserId.isPresent()) {
                     detail.setCommission(BigDecimal.valueOf(byUserId.get().getCommission()));
                     detail.setTotal(BigDecimal.valueOf(byUserId.get().getCommission()*orderQty));

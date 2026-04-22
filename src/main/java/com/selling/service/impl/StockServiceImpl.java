@@ -90,7 +90,6 @@ public class StockServiceImpl implements StockService {
         int remainingQty = qty; // මෙකෙන් අපිට අඩු කරන්න තියෙන මුළු qty එක track කරගන්න පුලුවන්
 
         for (Stock stock : allByType) {
-            System.out.println(stock);
             if (remainingQty <= 0) {
                 break; // අඩු කරන්න දෙයක් නැත්තන් loop එක නවත්වන්න
             }
@@ -111,18 +110,6 @@ public class StockServiceImpl implements StockService {
                 stockRepo.save(stock);
             }
         }
-    }
-
-
-    @Override
-    public void updateStockQty(List<OrderDetails> details) {
-//        for (OrderDetails detail : details) {
-//            List<Stock> allByType = stockRepo.findAllByType(detail.getProduct().getName());
-//            System.out.println("all : "+ allByType);
-//            Stock stock = allByType.get(allByType.size());
-//            stock.setQuantity(stock.getQuantity() + detail.getQty());
-//            stockRepo.save(stock);
-//        }
     }
 
     public Stock dtoToEntity(StockDto stockDto) {
