@@ -112,18 +112,6 @@ public class StockServiceImpl implements StockService {
         }
     }
 
-
-    @Override
-    public void updateStockQty(List<OrderDetails> details) {
-//        for (OrderDetails detail : details) {
-//            List<Stock> allByType = stockRepo.findAllByType(detail.getProduct().getName());
-//            System.out.println("all : "+ allByType);
-//            Stock stock = allByType.get(allByType.size());
-//            stock.setQuantity(stock.getQuantity() + detail.getQty());
-//            stockRepo.save(stock);
-//        }
-    }
-
     public Stock dtoToEntity(StockDto stockDto) {
         return modelMapper.map(stockDto, Stock.class);
     }

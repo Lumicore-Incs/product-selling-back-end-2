@@ -7,7 +7,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import com.selling.repository.*;
-import com.selling.service.StockService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,7 +37,6 @@ public class CustomerServiceImpl implements CustomerService {
   private final ProductRepo productRepository;
   private final MapperService mapperService;
   private final OrderService orderService;
-  private final StockService stockService;
 
   @Override
   @Transactional
@@ -132,8 +130,6 @@ public class CustomerServiceImpl implements CustomerService {
           orderDetails.setProduct(product);
           orderDetails.setQty(item.getQty());
           orderDetails.setTotal(item.getTotal());
-
-          stockService.updateStockByName(product.getName(), item.getQty());
 
           return orderDetails;
         })

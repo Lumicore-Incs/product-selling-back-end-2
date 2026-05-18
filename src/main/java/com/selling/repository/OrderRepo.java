@@ -88,7 +88,7 @@ public interface OrderRepo extends JpaRepository<Order, Integer> {
           FROM Order o
           JOIN o.orderDetails od
           WHERE o.status = :status
-          AND o.date BETWEEN :start AND :end
+          AND o.deliveryDate BETWEEN :start AND :end
       """)
   Long countByStatusAndDateRange(
       @Param("status") String status,
@@ -101,7 +101,7 @@ public interface OrderRepo extends JpaRepository<Order, Integer> {
           JOIN o.orderDetails od
           WHERE o.user.id = :userId
           AND o.status = :status
-          AND o.date BETWEEN :start AND :end
+          AND o.deliveryDate BETWEEN :start AND :end
       """)
   Long countByCustomerUserIdAndStatusAndDateBetween(
       @Param("userId") Long userId,
@@ -112,7 +112,7 @@ public interface OrderRepo extends JpaRepository<Order, Integer> {
     @Query("SELECT o FROM Order o WHERE o.user.id = :userId AND o.date BETWEEN :start AND :end")
     List<Order> findByUserIdAndDateBetween(@Param("userId") Long userId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
-     @Query("SELECT o FROM Order o WHERE o.user.id = :userId AND o.date BETWEEN :start AND :end AND o.status = 'DELIVERED'")
+     @Query("SELECT o FROM Order o WHERE o.user.id = :userId AND o.deliveryDate BETWEEN :start AND :end AND o.status = 'DELIVERED'")
     List<Order> findByUserIdAndDateBetweenByStatus(@Param("userId") Long userId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
 

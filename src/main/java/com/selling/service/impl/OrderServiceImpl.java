@@ -7,11 +7,14 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.Optional;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
-import com.selling.model.Order;
+import com.selling.model.*;
+import com.selling.repository.CustomerRepo;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Async;
@@ -31,14 +34,10 @@ import com.selling.dto.TrackingDto;
 import com.selling.dto.UserDto;
 import com.selling.dto.get.OrderDetailsDtoGet;
 import com.selling.dto.get.OrderDtoGet;
-import com.selling.model.OrderDetails;
-import com.selling.model.Product;
-import com.selling.model.User;
 import com.selling.repository.OrderDetailsRepo;
 import com.selling.repository.OrderRepo;
 import com.selling.repository.ProductRepo;
 import com.selling.service.OrderService;
-import com.selling.service.StockService;
 import com.selling.util.MapperService;
 
 import lombok.RequiredArgsConstructor;
@@ -50,8 +49,14 @@ public class OrderServiceImpl implements OrderService {
   private final OrderDetailsRepo orderDetailsRepo;
   private final MapperService mapperService;
   private final ProductRepo productRepository;
-  private final StockService stockService;
-  private final RestTemplate restTemplate;
+  private final CustomerRepo customerRepo;
+
+  @Autowired
+  private RestTemplate restTemplate;
+
+  @Autowired
+  @Qualifier("orderExecutor")
+  private Executor orderExecutor;
 
   @Override
   public String generateOrderSerialNumber(Product product, UserDto userDto) {
@@ -97,7 +102,7 @@ public class OrderServiceImpl implements OrderService {
       }
 
       return String.format("Completed: %d successful, %d failed. Details: %s",
-          successCount, failureCount, String.join("; ", results));
+              successCount, failureCount, String.join("; ", results));
 
     } catch (Exception e) {
       return "Error processing tracking upload: " + e.getMessage();
@@ -125,7 +130,7 @@ public class OrderServiceImpl implements OrderService {
 
       // Order එක සොයාගැනීම
       Order order = orderRepo.findBySerialNo(serialNo)
-          .orElse(null);
+              .orElse(null);
 
       if (order == null) {
         return "Failed: Order not found with serial number: " + serialNo;
@@ -137,7 +142,7 @@ public class OrderServiceImpl implements OrderService {
       orderRepo.save(order);
 
       return String.format("Success: Order %s updated with tracking ID %s",
-          serialNo, wayBillNo);
+              serialNo, wayBillNo);
 
     } catch (Exception e) {
       return "Failed: Error updating order " + trackingDto.getOrderId() + " - " + e.getMessage();
@@ -195,7 +200,7 @@ public class OrderServiceImpl implements OrderService {
 
     LocalDate today = LocalDate.now();
     List<Order> userOrders = orderRepo
-        .findByUser((userDto == null) ? null : mapperService.map(userDto, User.class));
+            .findByUser((userDto == null) ? null : mapperService.map(userDto, User.class));
 
     for (Order order : userOrders) {
       LocalDate orderDate = order.getDate().toLocalDate();
@@ -216,7 +221,7 @@ public class OrderServiceImpl implements OrderService {
   public List<OrderDtoGet> getAllOrderByUserId(UserDto userDto) {
     List<OrderDtoGet> orderDtoGetList = new ArrayList<>();
     List<Order> userOrders = orderRepo
-        .findByUser((userDto == null) ? null : mapperService.map(userDto, User.class));
+            .findByUser((userDto == null) ? null : mapperService.map(userDto, User.class));
     for (Order order : userOrders) {
       if (order.getCustomer() != null) {
         OrderDtoGet map = mapperService.map(order, OrderDtoGet.class);
@@ -230,50 +235,37 @@ public class OrderServiceImpl implements OrderService {
 
   @Override
   public PaginationResponse<OrderDtoGet> getAllTodayOrderPaginated(int page, int size, String search, String status,
-      Integer productId) {
+                                                                   Integer productId) {
     List<Order> allOrders = orderRepo.findAll();
     return buildFilteredPaginatedResponse(allOrders, page, size, search, status, productId, true, null);
   }
 
   @Override
   public PaginationResponse<OrderDtoGet> getAllTodayOrderByUserIdPaginated(UserDto userDto, int page, int size,
-      String search, String status, Integer productId) {
+                                                                           String search, String status, Integer productId) {
     List<Order> userOrders = orderRepo.findByUser(mapperService.map(userDto, User.class));
     return buildFilteredPaginatedResponse(userOrders, page, size, search, status, productId, true, null);
   }
 
   @Override
   public PaginationResponse<OrderDtoGet> getAllOrderPaginated(int page, int size, String search, String status,
-      Integer productId) {
+                                                              Integer productId) {
     List<Order> allOrders = orderRepo.findAllByOrderByOrderIdDesc();
     return buildFilteredPaginatedResponse(allOrders, page, size, search, status, productId, false, null);
   }
 
   @Override
   public PaginationResponse<OrderDtoGet> getAllOrderByUserIdPaginated(UserDto userDto, int page, int size,
-      String search, String status, Integer productId) {
+                                                                      String search, String status, Integer productId) {
     List<Order> userOrders = orderRepo.findByUserOrderByOrderIdDesc(mapperService.map(userDto, User.class));
     return buildFilteredPaginatedResponse(userOrders, page, size, search, status, productId, false, null);
   }
 
-  /**
-   * Shared helper: filter + paginate a list of Order entities.
-   *
-   * @param source    raw list of orders to filter
-   * @param page      zero-based page number
-   * @param size      page size
-   * @param search    LIKE match against customerName, weyBillId, contact01,
-   *                  contact02
-   * @param status    exact match on order status (null → no filter)
-   * @param productId filter orders containing at least one detail for this
-   *                  product (null → no filter)
-   * @param todayOnly if true, restrict to orders whose date is today
-   * @param ignored   reserved (pass null)
-   */
+
   private PaginationResponse<OrderDtoGet> buildFilteredPaginatedResponse(
-      List<Order> source, int page, int size,
-      String search, String status, Integer productId,
-      boolean todayOnly, Object ignored) {
+          List<Order> source, int page, int size,
+          String search, String status, Integer productId,
+          boolean todayOnly, Object ignored) {
     try {
       // Resolve order IDs that contain the requested product (single DB call)
       final java.util.Set<Integer> productOrderIds;
@@ -288,41 +280,41 @@ public class OrderServiceImpl implements OrderService {
       String statusFilter = (status != null && !status.isEmpty() && !status.equals("ALL STATUS")) ? status : null;
 
       List<Order> filtered = source.stream()
-          .filter(order -> {
-            if (order.getCustomer() == null)
-              return false;
+              .filter(order -> {
+                if (order.getCustomer() == null)
+                  return false;
 
-            // Today-only restriction
-            if (todayOnly && !order.getDate().toLocalDate().equals(today))
-              return false;
+                // Today-only restriction
+                if (todayOnly && !order.getDate().toLocalDate().equals(today))
+                  return false;
 
-            // Exact status match
-            if (statusFilter != null && !statusFilter.equals(order.getStatus()))
-              return false;
+                // Exact status match
+                if (statusFilter != null && !statusFilter.equals(order.getStatus()))
+                  return false;
 
-            // productId: must appear in at least one order detail
-            if (productOrderIds != null && !productOrderIds.contains(order.getOrderId()))
-              return false;
+                // productId: must appear in at least one order detail
+                if (productOrderIds != null && !productOrderIds.contains(order.getOrderId()))
+                  return false;
 
-            // Multi-field search: customerName, weyBillId, contact01, contact02
-            if (searchLower != null) {
-              String name = order.getCustomer().getName() != null ? order.getCustomer().getName().toLowerCase() : "";
-              String waybill = order.getWeyBillId() != null ? order.getWeyBillId().toLowerCase() : "";
-              String contact1 = order.getCustomer().getContact01() != null
-                  ? order.getCustomer().getContact01().toLowerCase()
-                  : "";
-              String contact2 = order.getCustomer().getContact02() != null
-                  ? order.getCustomer().getContact02().toLowerCase()
-                  : "";
-              if (!name.contains(searchLower) && !waybill.contains(searchLower)
-                  && !contact1.contains(searchLower) && !contact2.contains(searchLower)) {
-                return false;
-              }
-            }
+                // Multi-field search: customerName, weyBillId, contact01, contact02
+                if (searchLower != null) {
+                  String name = order.getCustomer().getName() != null ? order.getCustomer().getName().toLowerCase() : "";
+                  String waybill = order.getWeyBillId() != null ? order.getWeyBillId().toLowerCase() : "";
+                  String contact1 = order.getCustomer().getContact01() != null
+                          ? order.getCustomer().getContact01().toLowerCase()
+                          : "";
+                  String contact2 = order.getCustomer().getContact02() != null
+                          ? order.getCustomer().getContact02().toLowerCase()
+                          : "";
+                  if (!name.contains(searchLower) && !waybill.contains(searchLower)
+                          && !contact1.contains(searchLower) && !contact2.contains(searchLower)) {
+                    return false;
+                  }
+                }
 
-            return true;
-          })
-          .collect(Collectors.toList());
+                return true;
+              })
+              .collect(Collectors.toList());
 
       long totalElements = filtered.size();
       int totalPages = (totalElements == 0) ? 0 : (int) Math.ceil((double) totalElements / size);
@@ -336,13 +328,13 @@ public class OrderServiceImpl implements OrderService {
       int endIndex = (int) Math.min((long) startIndex + size, totalElements);
 
       List<OrderDtoGet> content = filtered.subList(startIndex, endIndex).stream()
-          .map(order -> {
-            OrderDtoGet dto = mapperService.map(order, OrderDtoGet.class);
-            dto.setCustomer(mapperService.map(order.getCustomer(), CustomerDto.class));
-            dto.setOrderDetails(getOrderDetailsData(order));
-            return dto;
-          })
-          .collect(Collectors.toList());
+              .map(order -> {
+                OrderDtoGet dto = mapperService.map(order, OrderDtoGet.class);
+                dto.setCustomer(mapperService.map(order.getCustomer(), CustomerDto.class));
+                dto.setOrderDetails(getOrderDetailsData(order));
+                return dto;
+              })
+              .collect(Collectors.toList());
 
       PaginationResponse<OrderDtoGet> response = new PaginationResponse<>();
       response.setContent(content);
@@ -358,76 +350,107 @@ public class OrderServiceImpl implements OrderService {
     }
   }
 
-  @Async
+  @Async("orderExecutor")
   @Override
   public void updateOrderDetails(UserDto userDto) {
-    List<Order> recentOrders = null;
-    if (userDto.getRole().equals("ADMIN") || userDto.getRole().equals("admin") || userDto.getRole().equals("super user")
-        || userDto.getRole().equals("SUPER USER")) {
+
+    List<Order> recentOrders;
+
+    if (isAdmin(userDto.getRole())) {
       recentOrders = orderRepo.findAllByOrderByOrderIdDesc();
     } else {
       recentOrders = orderRepo.findByUserIdOrderByOrderIdDesc(userDto.getId());
     }
 
-    // Process up to 5 orders in parallel
-    List<CompletableFuture<Void>> futures = recentOrders.stream()
-        .filter(order -> !(order.getStatus().equals("Delivered") || order.getStatus().equals("Failed to Deliver")
-            || order.getStatus().equals("NotFound"))
-            && !order.getTrackingId().equals("TRK"))
-        .map(order -> CompletableFuture.runAsync(() -> {
-          String value = checkTrackingStatus(order.getTrackingId());
-          if (value != null && !value.equals(order.getStatus())) {
-            order.setStatus(value);
-            order.setDeliveryDate(LocalDateTime.now());
-            orderRepo.save(order);
-          }
-        }))
-        .collect(Collectors.toList());
+    // ✅ Filter valid orders
+    List<Order> filteredOrders = recentOrders.stream()
+            .filter(order -> isValidOrder(order))
+            .collect(Collectors.toList());
 
-    // Wait for all to complete (with timeout)
-    CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-        .orTimeout(5, TimeUnit.MINUTES) // 5 minute timeout for all
-        .exceptionally(ex -> {
-          System.err.println("Error updating tracking status: " + ex.getMessage());
-          return null;
-        })
-        .join();
+    // ✅ Limit to 5 parallel threads
+    ExecutorService limitedExecutor = Executors.newFixedThreadPool(5);
+
+    try {
+      List<CompletableFuture<Void>> futures = filteredOrders.stream()
+              .map(order -> CompletableFuture.runAsync(() -> processOrder(order), limitedExecutor))
+              .collect(Collectors.toList());
+
+      // ✅ Wait with timeout
+      CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+              .orTimeout(5, TimeUnit.MINUTES)
+              .exceptionally(ex -> {
+                System.err.println("Error updating tracking status: " + ex.getMessage());
+                return null;
+              })
+              .join();
+
+    } finally {
+      limitedExecutor.shutdown(); // 🔥 important
+    }
   }
 
+  // 🔹 Process single order
+  private void processOrder(Order order) {
+    try {
+      String value = checkTrackingStatus(order.getTrackingId());
+
+      if (value != null && !value.equals(order.getStatus())) {
+        order.setStatus(value);
+        order.setDeliveryDate(LocalDateTime.now());
+        orderRepo.save(order);
+      }
+
+    } catch (Exception e) {
+      System.err.println("Error processing order " + order.getTrackingId() + ": " + e.getMessage());
+    }
+  }
+
+  // 🔹 Validation
+  private boolean isValidOrder(Order order) {
+    return !(order.getStatus().equals("Delivered")
+            || order.getStatus().equals("Failed to Deliver")
+            || order.getStatus().equals("NotFound"))
+            && !order.getTrackingId().equals("TRK");
+  }
+
+  // 🔹 Role check
+  private boolean isAdmin(String role) {
+    return role.equalsIgnoreCase("ADMIN")
+            || role.equalsIgnoreCase("SUPER USER");
+  }
+
+  // 🔥 API CALL (with timeout safe handling)
   private String checkTrackingStatus(String id) {
+
     String apiUrl = "https://api.transexpress.lk/api/v1/tracking?waybill_id=" + id;
 
     try {
       String response = restTemplate.getForObject(apiUrl, String.class);
-      JsonObject jsonResponse = JsonParser.parseString(response).getAsJsonObject();
 
+      JsonObject jsonResponse = JsonParser.parseString(response).getAsJsonObject();
       JsonArray dataArray = jsonResponse.getAsJsonArray("data");
-      String lastStatus = null;
 
       for (int i = 0; i < dataArray.size(); i++) {
         JsonObject dataItem = dataArray.get(i).getAsJsonObject();
+
         if ("tracking_history".equals(dataItem.get("key").getAsString())) {
+
           JsonArray historyArray = dataItem.getAsJsonArray("value");
 
           if (historyArray.size() > 0) {
-            JsonObject lastStatusItem = historyArray.get(historyArray.size() - 1).getAsJsonObject();
-            lastStatus = lastStatusItem.get("status_name").getAsString();
+            JsonObject lastStatusItem =
+                    historyArray.get(historyArray.size() - 1).getAsJsonObject();
+
+            return lastStatusItem.get("status_name").getAsString();
           }
-          break;
         }
       }
 
-      if (lastStatus != null) {
-        return lastStatus;
-      } else {
-        // Don't return "NotFound" - preserve existing status when API has no data
-        return null; // Return null to indicate "no update needed"
-      }
+      return null;
 
     } catch (Exception e) {
-      e.printStackTrace();
-      System.out.println("Error while calling API for tracking ID " + id + ": " + e.getMessage());
-      return null; // Don't update status on API exception
+      System.err.println("API error for tracking ID " + id + ": " + e.getMessage());
+      return null;
     }
   }
 
@@ -438,7 +461,7 @@ public class OrderServiceImpl implements OrderService {
       if (orderDetails != null) {
         OrderDetailsDtoGet map = mapperService.map(orderDetails, OrderDetailsDtoGet.class);
         map.setProductId((orderDetails.getProduct() == null) ? null
-            : mapperService.map(orderDetails.getProduct(), ProductDto.class));
+                : mapperService.map(orderDetails.getProduct(), ProductDto.class));
         orderDetailsDtoGetList.add(map);
       }
     }
@@ -451,7 +474,7 @@ public class OrderServiceImpl implements OrderService {
     List<Order> temporaryOrders = orderRepo.findByStatus("TEMPORARY");
 
     if (Objects.equals(userDto.getRole(), "admin") || Objects.equals(userDto.getRole(), "ADMIN")
-        || Objects.equals(userDto.getRole(), "SUPER USER") || Objects.equals(userDto.getRole(), "SUPERUSER")) {
+            || Objects.equals(userDto.getRole(), "SUPER USER") || Objects.equals(userDto.getRole(), "SUPERUSER")) {
       for (Order order : temporaryOrders) {
         OrderDtoGet dto = mapperService.map(order, OrderDtoGet.class);
         dto.setOrderDetails(getOrderDetailsData(order));
@@ -495,23 +518,23 @@ public class OrderServiceImpl implements OrderService {
 
       // 3. Save Order Details
       List<OrderDetails> orderDetailsList = requestDTO.getItems().stream()
-          .map(item -> {
-            Product product = productRepository.findAllByProductId(item.getProductId());
-            if (product == null) {
-              throw new ResponseStatusException(
-                  HttpStatus.NOT_FOUND, "Product not found with id: " + item.getProductId());
-            }
+              .map(item -> {
+                Product product = productRepository.findAllByProductId(item.getProductId());
+                if (product == null) {
+                  throw new ResponseStatusException(
+                          HttpStatus.NOT_FOUND, "Product not found with id: " + item.getProductId());
+                }
 
-            OrderDetails orderDetails = new OrderDetails();
-            orderDetails.setOrderDetailsId(item.getOrderDetailsId());
-            orderDetails.setOrder(savedOrder);
-            orderDetails.setProduct(product);
-            orderDetails.setQty(item.getQty());
-            orderDetails.setTotal(item.getTotal());
+                OrderDetails orderDetails = new OrderDetails();
+                orderDetails.setOrderDetailsId(item.getOrderDetailsId());
+                orderDetails.setOrder(savedOrder);
+                orderDetails.setProduct(product);
+                orderDetails.setQty(item.getQty());
+                orderDetails.setTotal(item.getTotal());
 
-            return orderDetails;
-          })
-          .collect(Collectors.toList());
+                return orderDetails;
+              })
+              .collect(Collectors.toList());
 
       orderDetailsRepo.saveAll(orderDetailsList);
 
@@ -545,12 +568,19 @@ public class OrderServiceImpl implements OrderService {
           orderDetailsRepo.deleteAll(details);
         }
         orderRepo.delete(order);
-        stockService.updateStockQty(details);
-
+        Optional<Customer> byId = customerRepo.findById(order.getCustomer().getCustomerId());
+        if (byId.isPresent()) {
+          Customer customer = byId.get();
+          if (order.getStatus().equals("PENDING")) {
+            customer.setStatus("PENDING");
+          }else {
+            customer.setStatus("PENDING");
+          }
+          customerRepo.save(customer);
+        }
         return success("Order deleted successfully", null);
       }
       return null;
-
     } catch (ResponseStatusException rse) {
       throw rse;
     } catch (Exception e) {

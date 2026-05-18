@@ -20,6 +20,4 @@ public interface StockService {
     List<StockDto> getAllStockByType(String name);
 
     void updateStockByName(String name, Integer qty);
-
-    void updateStockQty(List<OrderDetails> details);
 }

@@ -4,7 +4,9 @@ import com.selling.dto.get.UserSummeryGet;
 import com.selling.dto.get.UserSummeryDetailsGet;
 import com.selling.model.Order;
 import com.selling.model.OrderDetails;
+import com.selling.model.Payment;
 import com.selling.repository.OrderRepo;
+import com.selling.repository.PaymentRepo;
 import com.selling.service.SummaryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -12,17 +14,14 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 public class SummaryServiceImpl implements SummaryService {
 
     private final OrderRepo orderRepo;
+    private final PaymentRepo paymentRepo;
 
     @Override
     public UserSummeryGet getSummaryDetails(Integer id, Integer month) {
@@ -44,7 +43,6 @@ public class SummaryServiceImpl implements SummaryService {
         int totalQty = 0;
         int deliveredCount = 0;
         BigDecimal totalPrice = BigDecimal.ZERO;
-
 
         for (Order order : ordersList) {
              int orderQty = 0;
@@ -68,7 +66,7 @@ public class SummaryServiceImpl implements SummaryService {
             }
             
             deliveredCount += orderQty;
-            totalPrice = totalPrice.add(order.getTotalPrice() != null ? order.getTotalPrice() : BigDecimal.ZERO);
+//            totalPrice = totalPrice.add(order.getTotalPrice() != null ? order.getTotalPrice() : BigDecimal.ZERO);
             
             LocalDate orderDate = order.getDate().toLocalDate();
             BigDecimal orderTotal = order.getTotalPrice() != null ? order.getTotalPrice() : BigDecimal.ZERO;
@@ -76,14 +74,21 @@ public class SummaryServiceImpl implements SummaryService {
             if (groupedDetails.containsKey(orderDate)) {
                 UserSummeryDetailsGet existing = groupedDetails.get(orderDate);
                 existing.setQty(existing.getQty() + orderQty);
-                existing.setTotal(existing.getTotal().add(orderTotal));
+                BigDecimal currentTotal = existing.getTotal() != null ? existing.getTotal() : BigDecimal.ZERO;
+                existing.setTotal(currentTotal.add(orderTotal));
             } else {
                 UserSummeryDetailsGet detail = new UserSummeryDetailsGet();
+                Optional<Payment> byUserId = paymentRepo.findByUserId(order.getUser().getId());
                 // Set to start of day for consistency
                 detail.setDate(orderDate.atStartOfDay());
                 detail.setQty(orderQty);
-                detail.setTotal(orderTotal);
                 detail.setCommission(BigDecimal.ZERO);
+                detail.setTotal(BigDecimal.ZERO);
+                if (byUserId.isPresent()) {
+                    detail.setCommission(BigDecimal.valueOf(byUserId.get().getCommission()));
+                    detail.setTotal(BigDecimal.valueOf(byUserId.get().getCommission()*orderQty));
+                }
+
                 groupedDetails.put(orderDate, detail);
             }
         }
