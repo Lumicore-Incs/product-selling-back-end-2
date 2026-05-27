@@ -1,6 +1,7 @@
 package com.selling.controller;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
@@ -99,7 +100,8 @@ public class OrderController {
       @RequestParam(name = "size", defaultValue = "10") int size,
       @RequestParam(name = "search", required = false) String search,
       @RequestParam(name = "status", required = false) String status,
-      @RequestParam(name = "productId", required = false) Integer productId) {
+      @RequestParam(name = "productId", required = false) Integer productId,
+      @RequestParam(name = "date", required = false) Date date) {
     try {
       if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
         return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
@@ -107,16 +109,34 @@ public class OrderController {
       UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
       if (Objects.equals(userDto.getRole(), "SUPER USER") || Objects.equals(userDto.getRole(), "ADMIN")) {
         PaginationResponse<OrderDtoGet> response = orderService.getAllOrderPaginated(page, size, search, status,
-            productId);
+            productId, (java.sql.Date) date);
         return new ResponseEntity<>(response, HttpStatus.OK);
       } else {
         PaginationResponse<OrderDtoGet> response = orderService.getAllOrderByUserIdPaginated(userDto, page, size,
-            search, status, productId);
+            search, status, productId, (java.sql.Date) date);
         return new ResponseEntity<>(response, HttpStatus.OK);
       }
     } catch (Exception e) {
       return new ResponseEntity<>("Error retrieving orders: " + e.getMessage(),
           HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @GetMapping("/getAllCustomerByUser")
+  public ResponseEntity<Object> getAllCustomerByUser(
+          @RequestHeader(name = "Authorization") String authorizationHeader,
+          @RequestParam(name = "date", required = false, defaultValue = "0") Date date,
+          @RequestParam(name = "id", defaultValue = "0") long userId){
+    try {
+      if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
+        return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
+      }
+      UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
+      List<OrderDtoGet> response = orderService.getAllOrderByUserId(userDto,date);
+      return new ResponseEntity<>(response, HttpStatus.OK);
+    } catch (Exception e) {
+      return new ResponseEntity<>("Error retrieving orders: " + e.getMessage(),
+              HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 

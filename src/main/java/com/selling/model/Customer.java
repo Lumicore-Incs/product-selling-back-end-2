@@ -47,6 +47,6 @@ public class Customer {
   @JoinColumn(name = "user_id", referencedColumnName = "user_id")
   private User user;
 
-  @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
+  @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL)
   private List<Order> orders;
 }

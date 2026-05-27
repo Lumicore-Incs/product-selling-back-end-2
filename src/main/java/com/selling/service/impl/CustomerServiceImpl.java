@@ -206,6 +206,7 @@ public class CustomerServiceImpl implements CustomerService {
           customer.setContact02(requestDTO.getContact02());
         customer.setStatus("TEMPORARY");
 
+
         Customer saved = customerRepository.save(customer);
         return mapperService.map(saved, CustomerDtoGet.class);
       } else {

@@ -26,6 +26,6 @@ public class Payment {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @OneToMany(mappedBy = "payment", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "payment", cascade = CascadeType.ALL)
     private List<PaymentDetails> paymentDetails;
 }

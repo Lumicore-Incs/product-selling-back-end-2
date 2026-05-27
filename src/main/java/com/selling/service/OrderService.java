@@ -1,5 +1,6 @@
 package com.selling.service;
 
+import java.sql.Date;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,7 +19,7 @@ public interface OrderService {
 
   List<OrderDtoGet> getAllOrder();
 
-  List<OrderDtoGet> getAllOrderByUserId(UserDto userDto);
+  List<OrderDtoGet> getAllOrderByUserId(UserDto userDto, java.util.Date date);
 
   PaginationResponse<OrderDtoGet> getAllTodayOrderPaginated(int page, int size, String search, String status,
       Integer productId);
@@ -27,10 +28,10 @@ public interface OrderService {
       String status, Integer productId);
 
   PaginationResponse<OrderDtoGet> getAllOrderPaginated(int page, int size, String search, String status,
-      Integer productId);
+                                                       Integer productId, Date date);
 
   PaginationResponse<OrderDtoGet> getAllOrderByUserIdPaginated(UserDto userDto, int page, int size, String search,
-      String status, Integer productId);
+                                                               String status, Integer productId, Date date);
 
   List<OrderDtoGet> getTemporaryOrders(UserDto dto);
 
