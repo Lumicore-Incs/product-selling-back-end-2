@@ -2,10 +2,9 @@ package com.selling.service.impl;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.sql.Date;
+import java.util.stream.Collectors;
 
 import com.selling.dto.get.GetUserDetailsDto;
 import com.selling.model.*;
@@ -116,9 +115,12 @@ public class DashBoardServiceImpl implements DashBoardService {
            Date todayDate = Date.valueOf(today);
            
            for (String serialNumber : serialNumbers) {
+               System.out.println("serial Number :"+serialNumber);
                Optional<Order> bySerialNo = orderRepo.findBySerialNo(serialNumber);
+               System.out.println("1");
                if (bySerialNo.isPresent()) {
                    Order order = bySerialNo.get();
+                   System.out.println("ok");
                    order.getCustomer().setStatus("PRINTING");
                    customerRepo.save(order.getCustomer());
                    // Get or create DailyCount for today
@@ -334,5 +336,42 @@ public class DashBoardServiceImpl implements DashBoardService {
         
         return Math.toIntExact(orderRepo.countByCustomerUserIdAndStatusAndDateBetween(
                 user.getId(), cancelStatus, startDateTime, endDateTime));
+    }
+
+    @Override
+    public List<Object> findOrderQty() {
+        try {
+
+            List<Order> pendingOrders = customerRepo.findAllPendingOrdersWithQuantities();
+
+            Map<String, Long> productOrderCount = pendingOrders.stream()
+                    .flatMap(order -> order.getOrderDetails().stream()
+                            .map(od -> new AbstractMap.SimpleEntry<>(
+                                    od.getProduct().getName()
+                                            + " " + od.getQty(),
+                                    order.getOrderId()
+                            ))
+                    )
+                    .distinct() // 🔥 remove duplicate same order-product
+                    .collect(Collectors.groupingBy(
+                            Map.Entry::getKey,
+                            Collectors.counting() // ✅ COUNT ORDERS
+                    ));
+
+            List<Object> result = productOrderCount.entrySet().stream()
+                    .map(entry -> {
+                        Map<String, Object> obj = new HashMap<>();
+                        obj.put("productName", entry.getKey());
+                        obj.put("totalQty", entry.getValue()); // actually order count
+                        return obj;
+                    })
+                    .collect(Collectors.toList());
+
+            return result;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Collections.emptyList();
+        }
     }
 }

@@ -42,14 +42,17 @@ public class User {
   @JoinColumn(name = "product_id", referencedColumnName = "product_id")
   private Product product;
 
-  @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+  @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
   private List<Customer> customers;
 
-  @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+  @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
   private List<Salary> salaries;
 
-  @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+  @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
   private List<Payment> payments;
+
+  @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+  private List<Order> order;
 
   public User(Long id, String name, String email, String telephone, String role, String registration_date,
       String status, String type, String password) {

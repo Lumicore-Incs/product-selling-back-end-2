@@ -42,10 +42,6 @@ public interface CustomerRepo extends JpaRepository<Customer, Integer> {
           "ORDER BY od.qty ASC")
   List<Order> findAllPendingOrdersWithQuantities();
 
-  List<Customer> findByUser_Id(Long id);
-
-  Optional<Customer> findByContact01(String contact01);
-
   @Query("SELECT DISTINCT c FROM Customer c JOIN c.orders o "
       + "WHERE (c.contact01 IN :contacts OR c.contact02 IN :contacts) "
       + "AND o.date >= :since "

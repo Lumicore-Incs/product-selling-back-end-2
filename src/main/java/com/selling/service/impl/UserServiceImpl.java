@@ -213,6 +213,4 @@ public class UserServiceImpl implements UserService {
     User save = userRepo.save(user);
     return mapperService.map(save, UserDtoForGet.class);
   }
-
-  // mapping done inline via MapperService to reduce boilerplate
 }

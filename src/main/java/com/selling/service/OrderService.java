@@ -1,5 +1,8 @@
 package com.selling.service;
 
+import java.sql.Date;
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,6 +11,7 @@ import com.selling.dto.CustomerRequestDTO;
 import com.selling.dto.PaginationResponse;
 import com.selling.dto.TrackingDto;
 import com.selling.dto.UserDto;
+import com.selling.dto.get.MonthlyOrderReportDtoGet;
 import com.selling.dto.get.OrderDtoGet;
 import com.selling.model.Product;
 
@@ -18,7 +22,7 @@ public interface OrderService {
 
   List<OrderDtoGet> getAllOrder();
 
-  List<OrderDtoGet> getAllOrderByUserId(UserDto userDto);
+  List<MonthlyOrderReportDtoGet> getAllOrderByUserId(long userDto, LocalDate date, YearMonth month);
 
   PaginationResponse<OrderDtoGet> getAllTodayOrderPaginated(int page, int size, String search, String status,
       Integer productId);
@@ -27,10 +31,10 @@ public interface OrderService {
       String status, Integer productId);
 
   PaginationResponse<OrderDtoGet> getAllOrderPaginated(int page, int size, String search, String status,
-      Integer productId);
+                                                       Integer productId, Date date);
 
   PaginationResponse<OrderDtoGet> getAllOrderByUserIdPaginated(UserDto userDto, int page, int size, String search,
-      String status, Integer productId);
+                                                               String status, Integer productId, Date date);
 
   List<OrderDtoGet> getTemporaryOrders(UserDto dto);
 
