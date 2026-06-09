@@ -1,5 +1,6 @@
 package com.selling.repository;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
@@ -18,7 +19,23 @@ public interface OrderRepo extends JpaRepository<Order, Integer> {
   @EntityGraph(attributePaths = { "customer", "orderDetails", "orderDetails.product" })
   List<Order> findByUser(User userId);
 
-  List<Order> findByUserByDate(@Param("status")User userId, @Param("status") Date date);
+  // දවසකට අදාල orders
+  @Query("SELECT o FROM Order o WHERE o.user = :user AND DATE(o.date) = DATE(:date)")
+  List<Order> findByUserAndDate(
+          @Param("user") User user,
+          @Param("date") LocalDate date
+  );
+
+  // month එකකට අදාල orders
+  @Query("SELECT o FROM Order o " +
+          "WHERE o.user = :user " +
+          "AND YEAR(o.date) = :year " +
+          "AND MONTH(o.date) = :month")
+  List<Order> findByUserAndMonth(
+          @Param("user") User user,
+          @Param("year") int year,
+          @Param("month") int month
+  );
 
   Order findAllByOrderId(Integer orderId);
 

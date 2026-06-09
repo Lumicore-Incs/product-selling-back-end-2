@@ -115,9 +115,12 @@ public class DashBoardServiceImpl implements DashBoardService {
            Date todayDate = Date.valueOf(today);
            
            for (String serialNumber : serialNumbers) {
+               System.out.println("serial Number :"+serialNumber);
                Optional<Order> bySerialNo = orderRepo.findBySerialNo(serialNumber);
+               System.out.println("1");
                if (bySerialNo.isPresent()) {
                    Order order = bySerialNo.get();
+                   System.out.println("ok");
                    order.getCustomer().setStatus("PRINTING");
                    customerRepo.save(order.getCustomer());
                    // Get or create DailyCount for today

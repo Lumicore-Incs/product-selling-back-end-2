@@ -204,7 +204,6 @@ public class CustomerServiceImpl implements CustomerService {
           customer.setContact01(requestDTO.getContact01());
         if (requestDTO.getContact02() != null)
           customer.setContact02(requestDTO.getContact02());
-        customer.setStatus("TEMPORARY");
 
 
         Customer saved = customerRepository.save(customer);
