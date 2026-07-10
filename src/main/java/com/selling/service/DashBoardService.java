@@ -24,4 +24,6 @@ public interface DashBoardService {
     int getCancelOrderByUser(UserDto user);
 
     List<Object> findOrderQty();
+
+    int processingOrders(UserDto userDto);
 }

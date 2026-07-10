@@ -374,4 +374,19 @@ public class DashBoardServiceImpl implements DashBoardService {
             return Collections.emptyList();
         }
     }
+
+    @Override
+    public int processingOrders(UserDto user) {
+        LocalDate today = LocalDate.now();
+
+        LocalDateTime startDateTime = today.atStartOfDay();
+        LocalDateTime endDateTime = today.plusDays(1).atStartOfDay();
+
+        if (user.getRole().equals("SUPER USER") || user.getRole().equals("ADMIN")) {
+            return Math.toIntExact(orderRepo.countByProcessingOrdersAndDateRange("Processing", startDateTime, endDateTime));
+        }
+
+        return Math.toIntExact(orderRepo.countByCustomerUserIdAndProcessingOrdersAndDateBetween(
+                user.getId(), "Processing", startDateTime, endDateTime));
+    }
 }

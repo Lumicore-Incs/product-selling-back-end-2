@@ -129,11 +129,13 @@ public class DashboardController {
         UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
         int totalOrder = dashBoardService.getTotalOrder(userDto);
         int todayOrder = dashBoardService.getTodayOrder(userDto);
+        int processingOrders = dashBoardService.processingOrders(userDto);
         int conformOrder = dashBoardService.getConformOrder(userDto);
         int cancelOrder = dashBoardService.getCancelOrder(userDto);
 
         response.put("total_order", totalOrder);
         response.put("today_order", todayOrder);
+        response.put("processing_orders", processingOrders);
         response.put("conform_order", conformOrder);
         response.put("cancel_order", cancelOrder);
 
