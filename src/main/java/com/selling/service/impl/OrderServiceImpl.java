@@ -647,51 +647,68 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public Object resolveDuplicateOrder(Integer orderId, String userRole, CustomerRequestDTO requestDTO) {
         try {
-            Order order = orderRepo.findById(orderId).orElse(null);
-            if (order == null) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found");
-            }
-            // Only resolve if status is TEMPORARY or similar
+            Order order = orderRepo.findById(orderId).orElseThrow(() ->
+                    new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+
+            // Update Order
             if ("TEMPORARY".equals(order.getStatus())) {
                 order.setStatus("PENDING");
                 order.getCustomer().setStatus("PENDING");
-            }else {
+            } else {
                 order.setStatus(requestDTO.getStatus());
                 order.setDeliveryDate(LocalDateTime.now());
             }
+
             order.setTotalPrice(requestDTO.getTotalPrice());
             order.setRemark(requestDTO.getRemark());
+            order.setDeliveryDate(requestDTO.getDeliveryDate());
+
             Order savedOrder = orderRepo.save(order);
 
-            // 3. Save Order Details
+            // Delete existing Order Details
+           // orderDetailsRepo.deleteByOrder(savedOrder);
+            // OR
+            orderDetailsRepo.deleteAllByOrder(savedOrder);
+
+            // Save new Order Details
             List<OrderDetails> orderDetailsList = requestDTO.getItems().stream()
                     .map(item -> {
                         Product product = productRepository.findAllByProductId(item.getProductId());
+
                         if (product == null) {
                             throw new ResponseStatusException(
-                                    HttpStatus.NOT_FOUND, "Product not found with id: " + item.getProductId());
+                                    HttpStatus.NOT_FOUND,
+                                    "Product not found with id: " + item.getProductId());
                         }
 
-                        OrderDetails orderDetails = new OrderDetails();
-                        orderDetails.setOrder(savedOrder);
-                        orderDetails.setProduct(product);
+                        OrderDetails details = new OrderDetails();
+                        details.setOrder(savedOrder);
+                        details.setProduct(product);
+                        details.setQty(item.getQty());          // if available
+                        details.setTotal(item.getTotal());      // if available
 
-                        return orderDetails;
+                        return details;
                     })
                     .collect(Collectors.toList());
 
             orderDetailsRepo.saveAll(orderDetailsList);
 
-            OrderDtoGet dto = mapperService.map(order, OrderDtoGet.class);
-            if (order.getCustomer() != null) {
-                dto.setCustomer(mapperService.map(order.getCustomer(), CustomerDto.class));
+            OrderDtoGet dto = mapperService.map(savedOrder, OrderDtoGet.class);
+
+            if (savedOrder.getCustomer() != null) {
+                dto.setCustomer(mapperService.map(savedOrder.getCustomer(), CustomerDto.class));
             }
-            dto.setOrderDetails(getOrderDetailsData(order));
+
+            dto.setOrderDetails(getOrderDetailsData(savedOrder));
+
             return dto;
-        } catch (ResponseStatusException rse) {
-            throw rse;
+
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error resolving order: " + e.getMessage());
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error resolving order: " + e.getMessage());
         }
     }
 

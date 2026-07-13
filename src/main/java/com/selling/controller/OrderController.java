@@ -82,6 +82,7 @@ public class OrderController {
             @RequestHeader(name = "Authorization") String authorizationHeader,
             @PathVariable("id") Integer id, @RequestBody @Valid CustomerRequestDTO requestDTO) {
         try {
+            System.out.println("pkl");
             if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(ApiResponse.error("Invalid token", 401));

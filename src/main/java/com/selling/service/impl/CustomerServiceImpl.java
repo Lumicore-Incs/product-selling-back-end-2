@@ -113,6 +113,7 @@ public class CustomerServiceImpl implements CustomerService {
     }
     String serial = orderService.generateOrderSerialNumber(firstProduct, userDto);
     order.setSerialNo(serial);
+    order.setDeliveryDate(requestDTO.getDeliveryDate());
 
     Order savedOrder = orderRepository.save(order);
 
@@ -217,4 +218,8 @@ public class CustomerServiceImpl implements CustomerService {
       throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error updating customer: " + e.getMessage());
     }
   }
+
+
+  //---------other funntion---------------
+
 }

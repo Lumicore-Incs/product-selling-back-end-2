@@ -22,6 +22,7 @@ public class CustomerRequestDTO {
   private String contact01;
   private String contact02;
   private LocalDateTime date;
+  private LocalDateTime deliveryDate;
   private String remark;
   private String status; // active, inactive
   private Integer userId;
