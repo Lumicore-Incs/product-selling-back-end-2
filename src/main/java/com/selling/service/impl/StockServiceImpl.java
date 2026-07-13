@@ -22,8 +22,49 @@ public class StockServiceImpl implements StockService {
 
     @Override
     public StockDto saveStock(StockDto stockDto) {
+
         Stock stock = dtoToEntity(stockDto);
+
+        // Damage stock නම් direct save
+        if (stock.getStatus() != null &&
+                stock.getStatus().equalsIgnoreCase("DAMAGE")) {
+
+            stockRepo.save(stock);
+            return entityToDto(stock);
+        }
+
+        // Same product stocks ගන්න
+        List<Stock> existingStocks = stockRepo.findAllByType(stock.getType());
+
+        int remainingQty = stock.getQuantity();
+
+        // Existing stock වලින් quantity adjust කරන්න
+        for (Stock existingStock : existingStocks) {
+
+            if (existingStock.getStatus() != null &&
+                    existingStock.getStatus().equalsIgnoreCase("DAMAGE")) {
+                continue;
+            }
+
+            int currentQty = existingStock.getQuantity();
+
+            if (currentQty + remainingQty >= 0) {
+                existingStock.setQuantity(currentQty + remainingQty);
+                remainingQty = 0;
+                stockRepo.save(existingStock);
+                break;
+            } else {
+                remainingQty += currentQty;
+                existingStock.setQuantity(0);
+                stockRepo.save(existingStock);
+            }
+        }
+
+        // Balance quantity එක අලුත් stock record එකට save කරන්න
+        stock.setQuantity(remainingQty);
+
         stockRepo.save(stock);
+
         return entityToDto(stock);
     }
 
@@ -86,32 +127,45 @@ public class StockServiceImpl implements StockService {
 
     @Override
     public void updateStockByName(String name, Integer qty) {
+
         List<Stock> allByType = stockRepo.findAllByType(name);
-        int remainingQty = qty; // මෙකෙන් අපිට අඩු කරන්න තියෙන මුළු qty එක track කරගන්න පුලුවන්
+
+        int remainingQty = qty;
+        Stock lastUpdatedStock = null;
 
         for (Stock stock : allByType) {
+
+            // DAMAGE stock skip කරන්න
+            if (stock.getStatus() != null &&
+                    stock.getStatus().equalsIgnoreCase("DAMAGE")) {
+                continue;
+            }
+
+            lastUpdatedStock = stock;
+
             if (remainingQty <= 0) {
-                break; // අඩු කරන්න දෙයක් නැත්තන් loop එක නවත්වන්න
+                break;
             }
 
             int currentQty = stock.getQuantity();
 
-            if (currentQty > 0) {
-                if (currentQty >= remainingQty) {
-                    // මේ stock එකෙන්ම balance එක අඩු කරන්න පුලුවන්
-                    stock.setQuantity(currentQty - remainingQty);
-                    remainingQty = 0;
-                } else {
-                    // මේ stock එකෙන් පුරා අඩු කරන්න බැහැ
-                    remainingQty -= currentQty;
-                    stock.setQuantity(0);
-                }
-
-                stockRepo.save(stock);
+            if (currentQty >= remainingQty) {
+                stock.setQuantity(currentQty - remainingQty);
+                remainingQty = 0;
+            } else {
+                remainingQty -= currentQty;
+                stock.setQuantity(0);
             }
+
+            stockRepo.save(stock);
+        }
+
+        // Stock මදි නම් අන්තිම stock එක negative කරන්න
+        if (remainingQty > 0 && lastUpdatedStock != null) {
+            lastUpdatedStock.setQuantity(lastUpdatedStock.getQuantity() - remainingQty);
+            stockRepo.save(lastUpdatedStock);
         }
     }
-
     public Stock dtoToEntity(StockDto stockDto) {
         return modelMapper.map(stockDto, Stock.class);
     }

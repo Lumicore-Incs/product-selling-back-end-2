@@ -40,17 +40,81 @@ public class DashBoardServiceImpl implements DashBoardService {
     @Autowired
     private StockService stockService;
 
+//    @Override
+//    public List<ExcelTypeDto> findOrder(String name) {
+//
+//        try {
+//            List<ExcelTypeDto> excelTypeDtos = new ArrayList<>();
+//
+//            List<Order> pendingOrdersWithQuantities = customerRepo.findAllPendingOrdersWithQuantities();
+//
+//            Long filterProductId = null;
+//
+//            // If name is not "all", get productId
+//            if (!name.equalsIgnoreCase("all")) {
+//                Product byName = productRepo.findByName(name);
+//                if (byName != null) {
+//                    filterProductId = Long.valueOf(byName.getProductId());
+//                }
+//            }
+//
+//            for (Order order : pendingOrdersWithQuantities) {
+//
+//                boolean isMatch = false;
+//                StringBuilder qtyDetails = new StringBuilder();
+//
+//                for (OrderDetails od : order.getOrderDetails()) {
+//
+//                    Long orderProductId = Long.valueOf(od.getProduct().getProductId());
+//
+//                    // If "all", take all orders
+//                    if (name.equalsIgnoreCase("all")) {
+//                        isMatch = true;
+//                    }
+//                    // Otherwise match productId
+//                    else if (filterProductId != null && filterProductId.equals(orderProductId)) {
+//                        isMatch = true;
+//                    }
+//
+//                    if (isMatch) {
+//                        qtyDetails.append(" + ")
+//                                .append(od.getProduct().getName())
+//                                .append(" + ")
+//                                .append(od.getQty());
+//                    }
+//                }
+//
+//                if (isMatch) {
+//                    Customer customer = order.getCustomer();
+//
+//                    ExcelTypeDto excelTypeDto = new ExcelTypeDto();
+//                    excelTypeDto.setId(order.getSerialNo());
+//                    excelTypeDto.setName(customer.getName());
+//                    excelTypeDto.setAddress(customer.getAddress());
+//                    excelTypeDto.setContact01(customer.getContact01());
+//                    excelTypeDto.setContact02(customer.getContact02());
+//                    excelTypeDto.setPrice(String.valueOf(order.getTotalPrice()));
+//                    excelTypeDto.setNote(order.getRemark());
+//
+//                    excelTypeDtos.add(excelTypeDto);
+//                }
+//            }
+//
+//            return excelTypeDtos;
+//
+//        } catch (Exception e) {
+//            return null;
+//        }
+//    }
+
+
     @Override
     public List<ExcelTypeDto> findOrder(String name) {
-
         try {
             List<ExcelTypeDto> excelTypeDtos = new ArrayList<>();
-
             List<Order> pendingOrdersWithQuantities = customerRepo.findAllPendingOrdersWithQuantities();
 
             Long filterProductId = null;
-
-            // If name is not "all", get productId
             if (!name.equalsIgnoreCase("all")) {
                 Product byName = productRepo.findByName(name);
                 if (byName != null) {
@@ -58,21 +122,28 @@ public class DashBoardServiceImpl implements DashBoardService {
                 }
             }
 
+            LocalDate today = LocalDate.now();
+
             for (Order order : pendingOrdersWithQuantities) {
+
+                LocalDate orderDate = order.getDeliveryDate() == null
+                        ? null
+                        : order.getDeliveryDate().toLocalDate();
+
+                // skip only future-dated orders (or null date)
+                if (orderDate == null || orderDate.isAfter(today)) {
+                    continue;
+                }
 
                 boolean isMatch = false;
                 StringBuilder qtyDetails = new StringBuilder();
 
                 for (OrderDetails od : order.getOrderDetails()) {
-
                     Long orderProductId = Long.valueOf(od.getProduct().getProductId());
 
-                    // If "all", take all orders
                     if (name.equalsIgnoreCase("all")) {
                         isMatch = true;
-                    }
-                    // Otherwise match productId
-                    else if (filterProductId != null && filterProductId.equals(orderProductId)) {
+                    } else if (filterProductId != null && filterProductId.equals(orderProductId)) {
                         isMatch = true;
                     }
 
@@ -86,7 +157,6 @@ public class DashBoardServiceImpl implements DashBoardService {
 
                 if (isMatch) {
                     Customer customer = order.getCustomer();
-
                     ExcelTypeDto excelTypeDto = new ExcelTypeDto();
                     excelTypeDto.setId(order.getSerialNo());
                     excelTypeDto.setName(customer.getName());
@@ -95,14 +165,13 @@ public class DashBoardServiceImpl implements DashBoardService {
                     excelTypeDto.setContact02(customer.getContact02());
                     excelTypeDto.setPrice(String.valueOf(order.getTotalPrice()));
                     excelTypeDto.setNote(order.getRemark());
-
                     excelTypeDtos.add(excelTypeDto);
                 }
             }
 
             return excelTypeDtos;
-
         } catch (Exception e) {
+            e.printStackTrace();
             return null;
         }
     }
@@ -117,10 +186,8 @@ public class DashBoardServiceImpl implements DashBoardService {
            for (String serialNumber : serialNumbers) {
                System.out.println("serial Number :"+serialNumber);
                Optional<Order> bySerialNo = orderRepo.findBySerialNo(serialNumber);
-               System.out.println("1");
                if (bySerialNo.isPresent()) {
                    Order order = bySerialNo.get();
-                   System.out.println("ok");
                    order.getCustomer().setStatus("PRINTING");
                    customerRepo.save(order.getCustomer());
                    // Get or create DailyCount for today
