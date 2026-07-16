@@ -165,7 +165,7 @@ public class AuthController {
       }
       UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
       if (Objects.equals(userDto.getRole(), "admin") || Objects.equals(userDto.getRole(), "ADMIN")
-          || Objects.equals(userDto.getRole(), "Admin")) {
+          || Objects.equals(userDto.getRole(), "Admin")|| Objects.equals(userDto.getRole(), "SUPER USER")|| Objects.equals(userDto.getRole(), "super user")) {
         boolean isDeleted = userService.deleteUser(id);
 
         if (isDeleted) {

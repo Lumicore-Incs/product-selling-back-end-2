@@ -40,17 +40,118 @@ public class DashBoardServiceImpl implements DashBoardService {
     @Autowired
     private StockService stockService;
 
+    @Override
+    public List<ExcelTypeDto> findOrder(String name) {
+
+        try {
+            List<ExcelTypeDto> excelTypeDtos = new ArrayList<>();
+
+            List<Order> pendingOrdersWithQuantities = customerRepo.findAllPendingOrdersWithQuantities();
+
+            if (pendingOrdersWithQuantities == null || name == null) {
+                return excelTypeDtos;
+            }
+
+            // ---- Mode detection ----
+            boolean isAll    = "all".equalsIgnoreCase(name.trim());
+            boolean isImport = "Import".equalsIgnoreCase(name.trim());
+
+            // ---- Product filter (only when a real product name is given) ----
+            Long filterProductId = null;
+            if (!isAll && !isImport) {
+                Product byName = productRepo.findByName(name);
+                if (byName == null) {
+                    // No such product -> nothing to export
+                    return excelTypeDtos;
+                }
+                filterProductId = Long.valueOf(byName.getProductId());
+            }
+
+            for (Order order : pendingOrdersWithQuantities) {
+
+                // ================= REMARK RULE =================
+                // Import        -> remark NOT null
+                // all           -> no remark filter
+                // product name  -> remark null only
+                boolean hasRemark = order.getRemark() != null && !order.getRemark().trim().isEmpty();
+
+                if (isImport) {
+                    if (!hasRemark) {
+                        continue;
+                    }
+                } else if (!isAll) {
+                    if (hasRemark) {
+                        continue;
+                    }
+                }
+
+                // ================= PRODUCT RULE =================
+                boolean isMatch = isAll || isImport;   // all / Import -> product filter නෑ
+                StringBuilder qtyDetails = new StringBuilder();
+
+                if (order.getOrderDetails() != null) {
+                    for (OrderDetails od : order.getOrderDetails()) {
+
+                        if (od.getProduct() == null) {
+                            continue;
+                        }
+
+                        Long orderProductId = Long.valueOf(od.getProduct().getProductId());
+
+                        // මේ detail line එක ගන්නද කියලා තනි තනිව බලනවා
+                        boolean detailMatch = isAll || isImport
+                                || (filterProductId != null && filterProductId.equals(orderProductId));
+
+                        if (detailMatch) {
+                            isMatch = true;
+                            qtyDetails.append(" + ")
+                                    .append(od.getProduct().getName())
+                                    .append(" + ")
+                                    .append(od.getQty());
+                        }
+                    }
+                }
+
+                if (!isMatch) {
+                    continue;
+                }
+
+                Customer customer = order.getCustomer();
+                if (customer == null) {
+                    continue;
+                }
+
+                ExcelTypeDto excelTypeDto = new ExcelTypeDto();
+                excelTypeDto.setId(order.getSerialNo());
+                excelTypeDto.setName(customer.getName());
+                excelTypeDto.setAddress(customer.getAddress());
+                excelTypeDto.setContact01(customer.getContact01());
+                excelTypeDto.setContact02(customer.getContact02());
+                excelTypeDto.setPrice(String.valueOf(order.getTotalPrice()));
+                excelTypeDto.setNote(order.getRemark());
+
+                // qtyDetails එකත් DTO එකට ඕන නම් මේක uncomment කරන්න
+                // excelTypeDto.setQty(qtyDetails.toString());
+
+                excelTypeDtos.add(excelTypeDto);
+            }
+
+            return excelTypeDtos;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+
 //    @Override
 //    public List<ExcelTypeDto> findOrder(String name) {
-//
 //        try {
 //            List<ExcelTypeDto> excelTypeDtos = new ArrayList<>();
-//
 //            List<Order> pendingOrdersWithQuantities = customerRepo.findAllPendingOrdersWithQuantities();
 //
 //            Long filterProductId = null;
-//
-//            // If name is not "all", get productId
 //            if (!name.equalsIgnoreCase("all")) {
 //                Product byName = productRepo.findByName(name);
 //                if (byName != null) {
@@ -58,21 +159,28 @@ public class DashBoardServiceImpl implements DashBoardService {
 //                }
 //            }
 //
+//            LocalDate today = LocalDate.now();
+//
 //            for (Order order : pendingOrdersWithQuantities) {
+//
+//                LocalDate orderDate = order.getDeliveryDate() == null
+//                        ? null
+//                        : order.getDeliveryDate().toLocalDate();
+//
+//                // skip only future-dated orders (or null date)
+//                if (orderDate == null || orderDate.isAfter(today)) {
+//                    continue;
+//                }
 //
 //                boolean isMatch = false;
 //                StringBuilder qtyDetails = new StringBuilder();
 //
 //                for (OrderDetails od : order.getOrderDetails()) {
-//
 //                    Long orderProductId = Long.valueOf(od.getProduct().getProductId());
 //
-//                    // If "all", take all orders
 //                    if (name.equalsIgnoreCase("all")) {
 //                        isMatch = true;
-//                    }
-//                    // Otherwise match productId
-//                    else if (filterProductId != null && filterProductId.equals(orderProductId)) {
+//                    } else if (filterProductId != null && filterProductId.equals(orderProductId)) {
 //                        isMatch = true;
 //                    }
 //
@@ -86,7 +194,6 @@ public class DashBoardServiceImpl implements DashBoardService {
 //
 //                if (isMatch) {
 //                    Customer customer = order.getCustomer();
-//
 //                    ExcelTypeDto excelTypeDto = new ExcelTypeDto();
 //                    excelTypeDto.setId(order.getSerialNo());
 //                    excelTypeDto.setName(customer.getName());
@@ -95,86 +202,16 @@ public class DashBoardServiceImpl implements DashBoardService {
 //                    excelTypeDto.setContact02(customer.getContact02());
 //                    excelTypeDto.setPrice(String.valueOf(order.getTotalPrice()));
 //                    excelTypeDto.setNote(order.getRemark());
-//
 //                    excelTypeDtos.add(excelTypeDto);
 //                }
 //            }
 //
 //            return excelTypeDtos;
-//
 //        } catch (Exception e) {
+//            e.printStackTrace();
 //            return null;
 //        }
 //    }
-
-
-    @Override
-    public List<ExcelTypeDto> findOrder(String name) {
-        try {
-            List<ExcelTypeDto> excelTypeDtos = new ArrayList<>();
-            List<Order> pendingOrdersWithQuantities = customerRepo.findAllPendingOrdersWithQuantities();
-
-            Long filterProductId = null;
-            if (!name.equalsIgnoreCase("all")) {
-                Product byName = productRepo.findByName(name);
-                if (byName != null) {
-                    filterProductId = Long.valueOf(byName.getProductId());
-                }
-            }
-
-            LocalDate today = LocalDate.now();
-
-            for (Order order : pendingOrdersWithQuantities) {
-
-                LocalDate orderDate = order.getDeliveryDate() == null
-                        ? null
-                        : order.getDeliveryDate().toLocalDate();
-
-                // skip only future-dated orders (or null date)
-                if (orderDate == null || orderDate.isAfter(today)) {
-                    continue;
-                }
-
-                boolean isMatch = false;
-                StringBuilder qtyDetails = new StringBuilder();
-
-                for (OrderDetails od : order.getOrderDetails()) {
-                    Long orderProductId = Long.valueOf(od.getProduct().getProductId());
-
-                    if (name.equalsIgnoreCase("all")) {
-                        isMatch = true;
-                    } else if (filterProductId != null && filterProductId.equals(orderProductId)) {
-                        isMatch = true;
-                    }
-
-                    if (isMatch) {
-                        qtyDetails.append(" + ")
-                                .append(od.getProduct().getName())
-                                .append(" + ")
-                                .append(od.getQty());
-                    }
-                }
-
-                if (isMatch) {
-                    Customer customer = order.getCustomer();
-                    ExcelTypeDto excelTypeDto = new ExcelTypeDto();
-                    excelTypeDto.setId(order.getSerialNo());
-                    excelTypeDto.setName(customer.getName());
-                    excelTypeDto.setAddress(customer.getAddress());
-                    excelTypeDto.setContact01(customer.getContact01());
-                    excelTypeDto.setContact02(customer.getContact02());
-                    excelTypeDto.setPrice(String.valueOf(order.getTotalPrice()));
-                    excelTypeDto.setNote(order.getRemark());
-                    excelTypeDtos.add(excelTypeDto);
-                }
-            }
-
-            return excelTypeDtos;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
 
     @Transactional
     @Override
