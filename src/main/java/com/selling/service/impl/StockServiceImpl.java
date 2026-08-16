@@ -77,34 +77,37 @@ public class StockServiceImpl implements StockService {
     }
 
     @Override
-    public StockDto getStockById(Long aLong) {
-        Integer id = Math.toIntExact(aLong);
-        return entityToDto(stockRepo.findById(id).get());
-    }
+    public StockDto updateStock(Integer id, StockDetailsDto stockDto) {
+        Optional<StockDetails> detailsOpt = stockDetailsRepo.findById(id);
+        if (detailsOpt.isPresent()) {
+            StockDetails existingDetail = detailsOpt.get();
+            int oldQty = existingDetail.getQty() != null ? existingDetail.getQty() : 0;
+            int newQty = stockDto.getQuantity();
+            int qtyDiff = newQty - oldQty;
 
-    @Override
-    public List<StockDto> getAllStock() {
-        List<Stock> all = stockRepo.findAllByOrderByIdDesc();
-        List<StockDto> stockDtos = new ArrayList<>();
-        for (Stock stock : all) {
-            stockDtos.add(entityToDto(stock));
-        }
-        return stockDtos;
-    }
-
-    @Override
-    public StockDto updateStock(Integer id, StockDto stockDto) {
-        Optional<Stock> byId = stockRepo.findById(id);
-        if (byId.isPresent()) {
-            Stock stock = byId.get();
-            // DAMAGE stock cannot be updated
-            if (stock.getStatus() != null && stock.getStatus().equalsIgnoreCase("DAMAGE")) {
-                return null;
+            // Find the correct parent Stock by type and status from the request
+            Stock parentStock;
+            if (stockDto.getStatus() != null && "DAMAGE".equalsIgnoreCase(stockDto.getStatus())) {
+                parentStock = stockRepo.findTopByTypeAndStatus(stockDto.getType(), "DAMAGE");
+            } else {
+                parentStock = stockRepo.findTopByTypeAndStatusNotDamage(stockDto.getType());
             }
-            Stock stock1 = dtoToEntity(stockDto);
-            stock1.setStock_id(stock.getStock_id());
-            stockRepo.save(stock1);
-            return entityToDto(stock1);
+
+            if (parentStock != null) {
+                parentStock.setTotalQuantity(parentStock.getTotalQuantity() + qtyDiff);
+                stockRepo.save(parentStock);
+            }
+
+            // Update the StockDetails record
+            existingDetail.setQty(newQty);
+            existingDetail.setStatus(stockDto.getStatus());
+            existingDetail.setType(stockDto.getType());
+            if (stockDto.getDate() != null) {
+                existingDetail.setDate(stockDto.getDate());
+            }
+            stockDetailsRepo.save(existingDetail);
+
+            return parentStock != null ? entityToDto(parentStock) : null;
         }
         return null;
     }
@@ -125,17 +128,8 @@ public class StockServiceImpl implements StockService {
         return false;
     }
 
-    @Override
-    public List<StockDto> getAllStockByType(String name) {
-        List<Stock> all = stockRepo.findAllByType(name);
-        List<StockDto> stockDtos = new ArrayList<>();
-        for (Stock stock : all) {
-            entityToDto(stock);
-            stockDtos.add(entityToDto(stock));
-        }
-        return stockDtos;
-    }
 
+    ////    check again ===============================================
     @Override
     public void updateStockByName(String name, Integer qty) {
 
@@ -181,8 +175,8 @@ public class StockServiceImpl implements StockService {
         return modelMapper.map(stockDto, Stock.class);
     }
 
-    public Stock stockDetailsDtoToEntity(StockDetails stockDto) {
-        return modelMapper.map(stockDto, Stock.class);
+    public StockDetails stockDetailsDtoToEntity(StockDetailsDto stockDto) {
+        return modelMapper.map(stockDto, StockDetails.class);
     }
 
     public StockDto entityToDto(Stock stock) {
