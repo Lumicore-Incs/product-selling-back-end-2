@@ -553,7 +553,7 @@ public class OrderServiceImpl implements OrderService {
     // 🔹 Validation
     private boolean isValidOrder(Order order) {
         return !(order.getStatus().equals("Delivered")
-                || order.getStatus().equals("Failed to Deliver")
+                || order.getStatus().equals("Received by Client")
                 || order.getStatus().equals("NotFound"))
                 && !order.getTrackingId().equals("TRK");
     }

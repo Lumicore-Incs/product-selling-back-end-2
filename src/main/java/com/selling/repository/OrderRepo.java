@@ -53,7 +53,6 @@ public interface OrderRepo extends JpaRepository<Order, Integer> {
           JOIN o.orderDetails od
           JOIN o.customer c
           WHERE o.status = :status
-          AND c.status = :status
       """)
   List<Order> findByStatus(@Param("status") String status);
 
@@ -124,10 +123,40 @@ public interface OrderRepo extends JpaRepository<Order, Integer> {
           AND o.deliveryDate BETWEEN :start AND :end
       """)
   Long countByCustomerUserIdAndStatusAndDateBetween(
-      @Param("userId") Long userId,
-      @Param("status") String status,
-      @Param("start") LocalDateTime start,
-      @Param("end") LocalDateTime end);
+          @Param("userId") Long userId,
+          @Param("status") String status,
+          @Param("start") LocalDateTime start,
+          @Param("end") LocalDateTime end);
+
+  @Query("""
+          SELECT COALESCE(SUM(od.qty), 0)
+          FROM Order o
+          JOIN o.orderDetails od
+          WHERE o.status IN :statuses
+          AND o.deliveryDate BETWEEN :startDate AND :endDate
+      """)
+  long countByStatusInAndDateBetween(
+          @Param("statuses") List<String> statuses,
+          @Param("startDate") LocalDateTime startDate,
+          @Param("endDate") LocalDateTime endDate
+  );
+
+
+
+  @Query("""
+          SELECT COALESCE(SUM(od.qty), 0)
+          FROM Order o
+          JOIN o.orderDetails od
+          WHERE o.user.id = :userId
+          AND o.status IN :statuses
+          AND o.deliveryDate BETWEEN :startDate AND :endDate
+      """)
+  long countByCustomerUserIdAndStatusInAndDateBetween(
+          @Param("userId") Long userId,
+          @Param("statuses") List<String> statuses,
+          @Param("startDate") LocalDateTime startDate,
+          @Param("endDate") LocalDateTime endDate
+  );
          
     @Query("SELECT o FROM Order o WHERE o.user.id = :userId AND o.date BETWEEN :start AND :end")
     List<Order> findByUserIdAndDateBetween(@Param("userId") Long userId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);

@@ -40,6 +40,110 @@ public class DashBoardServiceImpl implements DashBoardService {
     @Autowired
     private StockService stockService;
 
+//    @Override
+//    public List<ExcelTypeDto> findOrder(String name) {
+//
+//        try {
+//            List<ExcelTypeDto> excelTypeDtos = new ArrayList<>();
+//
+//            List<Order> pendingOrdersWithQuantities = customerRepo.findAllPendingOrdersWithQuantities();
+//
+//            if (pendingOrdersWithQuantities == null || name == null) {
+//                return excelTypeDtos;
+//            }
+//
+//            // ---- Mode detection ----
+//            boolean isAll    = "all".equalsIgnoreCase(name.trim());
+//            boolean isImport = "Import".equalsIgnoreCase(name.trim());
+//
+//            // ---- Product filter (only when a real product name is given) ----
+//            Long filterProductId = null;
+//            if (!isAll && !isImport) {
+//                Product byName = productRepo.findByName(name);
+//                if (byName == null) {
+//                    // No such product -> nothing to export
+//                    return excelTypeDtos;
+//                }
+//                filterProductId = Long.valueOf(byName.getProductId());
+//            }
+//
+//            for (Order order : pendingOrdersWithQuantities) {
+//
+//                // ================= REMARK RULE =================
+//                // Import        -> remark NOT null
+//                // all           -> no remark filter
+//                // product name  -> remark null only
+//                boolean hasRemark = order.getRemark() != null && !order.getRemark().trim().isEmpty();
+//
+//                if (isImport) {
+//                    if (!hasRemark) {
+//                        continue;
+//                    }
+//                } else if (!isAll) {
+//                    if (hasRemark) {
+//                        continue;
+//                    }
+//                }
+//
+//                // ================= PRODUCT RULE =================
+//                boolean isMatch = isAll || isImport;   // all / Import -> product filter නෑ
+//                StringBuilder qtyDetails = new StringBuilder();
+//
+//                if (order.getOrderDetails() != null) {
+//                    for (OrderDetails od : order.getOrderDetails()) {
+//
+//                        if (od.getProduct() == null) {
+//                            continue;
+//                        }
+//
+//                        Long orderProductId = Long.valueOf(od.getProduct().getProductId());
+//
+//                        // මේ detail line එක ගන්නද කියලා තනි තනිව බලනවා
+//                        boolean detailMatch = isAll || isImport
+//                                || (filterProductId != null && filterProductId.equals(orderProductId));
+//
+//                        if (detailMatch) {
+//                            isMatch = true;
+//                            qtyDetails.append(" + ")
+//                                    .append(od.getProduct().getName())
+//                                    .append(" + ")
+//                                    .append(od.getQty());
+//                        }
+//                    }
+//                }
+//
+//                if (!isMatch) {
+//                    continue;
+//                }
+//
+//                Customer customer = order.getCustomer();
+//                if (customer == null) {
+//                    continue;
+//                }
+//
+//                ExcelTypeDto excelTypeDto = new ExcelTypeDto();
+//                excelTypeDto.setId(order.getSerialNo());
+//                excelTypeDto.setName(customer.getName());
+//                excelTypeDto.setAddress(customer.getAddress());
+//                excelTypeDto.setContact01(customer.getContact01());
+//                excelTypeDto.setContact02(customer.getContact02());
+//                excelTypeDto.setPrice(String.valueOf(order.getTotalPrice()));
+//                excelTypeDto.setNote(order.getRemark());
+//
+//                // qtyDetails එකත් DTO එකට ඕන නම් මේක uncomment කරන්න
+//                // excelTypeDto.setQty(qtyDetails.toString());
+//
+//                excelTypeDtos.add(excelTypeDto);
+//            }
+//
+//            return excelTypeDtos;
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            return new ArrayList<>();
+//        }
+//    }
+
     @Override
     public List<ExcelTypeDto> findOrder(String name) {
 
@@ -48,242 +152,137 @@ public class DashBoardServiceImpl implements DashBoardService {
 
             List<Order> pendingOrdersWithQuantities = customerRepo.findAllPendingOrdersWithQuantities();
 
-            if (pendingOrdersWithQuantities == null || name == null) {
-                return excelTypeDtos;
-            }
-
-            // ---- Mode detection ----
-            boolean isAll    = "all".equalsIgnoreCase(name.trim());
-            boolean isImport = "Import".equalsIgnoreCase(name.trim());
-
-            // ---- Product filter (only when a real product name is given) ----
             Long filterProductId = null;
-            if (!isAll && !isImport) {
+
+            // If name is not "all", get productId
+            if (!name.equalsIgnoreCase("all")) {
                 Product byName = productRepo.findByName(name);
-                if (byName == null) {
-                    // No such product -> nothing to export
-                    return excelTypeDtos;
+                if (byName != null) {
+                    filterProductId = Long.valueOf(byName.getProductId());
                 }
-                filterProductId = Long.valueOf(byName.getProductId());
             }
 
             for (Order order : pendingOrdersWithQuantities) {
 
-                // ================= REMARK RULE =================
-                // Import        -> remark NOT null
-                // all           -> no remark filter
-                // product name  -> remark null only
-                boolean hasRemark = order.getRemark() != null && !order.getRemark().trim().isEmpty();
-
-                if (isImport) {
-                    if (!hasRemark) {
-                        continue;
-                    }
-                } else if (!isAll) {
-                    if (hasRemark) {
-                        continue;
-                    }
-                }
-
-                // ================= PRODUCT RULE =================
-                boolean isMatch = isAll || isImport;   // all / Import -> product filter නෑ
+                boolean isMatch = false;
                 StringBuilder qtyDetails = new StringBuilder();
 
-                if (order.getOrderDetails() != null) {
-                    for (OrderDetails od : order.getOrderDetails()) {
+                for (OrderDetails od : order.getOrderDetails()) {
 
-                        if (od.getProduct() == null) {
-                            continue;
-                        }
+                    Long orderProductId = Long.valueOf(od.getProduct().getProductId());
 
-                        Long orderProductId = Long.valueOf(od.getProduct().getProductId());
+                    // If "all", take all orders
+                    if (name.equalsIgnoreCase("all")) {
+                        isMatch = true;
+                    }
+                    // Otherwise match productId
+                    else if (filterProductId != null && filterProductId.equals(orderProductId)) {
+                        isMatch = true;
+                    }
 
-                        // මේ detail line එක ගන්නද කියලා තනි තනිව බලනවා
-                        boolean detailMatch = isAll || isImport
-                                || (filterProductId != null && filterProductId.equals(orderProductId));
-
-                        if (detailMatch) {
-                            isMatch = true;
-                            qtyDetails.append(" + ")
-                                    .append(od.getProduct().getName())
-                                    .append(" + ")
-                                    .append(od.getQty());
-                        }
+                    if (isMatch) {
+                        qtyDetails.append(" + ")
+                                .append(od.getProduct().getName())
+                                .append(" + ")
+                                .append(od.getQty());
                     }
                 }
 
-                if (!isMatch) {
-                    continue;
+                if (isMatch) {
+                    Customer customer = order.getCustomer();
+
+                    ExcelTypeDto excelTypeDto = new ExcelTypeDto();
+                    excelTypeDto.setId(order.getSerialNo());
+                    excelTypeDto.setName(customer.getName());
+                    excelTypeDto.setAddress(customer.getAddress());
+                    excelTypeDto.setContact01(customer.getContact01());
+                    excelTypeDto.setContact02(customer.getContact02());
+                    excelTypeDto.setPrice(String.valueOf(order.getTotalPrice()));
+                    excelTypeDto.setNote(order.getRemark());
+
+                    excelTypeDtos.add(excelTypeDto);
                 }
-
-                Customer customer = order.getCustomer();
-                if (customer == null) {
-                    continue;
-                }
-
-                ExcelTypeDto excelTypeDto = new ExcelTypeDto();
-                excelTypeDto.setId(order.getSerialNo());
-                excelTypeDto.setName(customer.getName());
-                excelTypeDto.setAddress(customer.getAddress());
-                excelTypeDto.setContact01(customer.getContact01());
-                excelTypeDto.setContact02(customer.getContact02());
-                excelTypeDto.setPrice(String.valueOf(order.getTotalPrice()));
-                excelTypeDto.setNote(order.getRemark());
-
-                // qtyDetails එකත් DTO එකට ඕන නම් මේක uncomment කරන්න
-                // excelTypeDto.setQty(qtyDetails.toString());
-
-                excelTypeDtos.add(excelTypeDto);
             }
 
             return excelTypeDtos;
 
         } catch (Exception e) {
-            e.printStackTrace();
-            return new ArrayList<>();
+            return null;
         }
     }
 
-
-//    @Override
-//    public List<ExcelTypeDto> findOrder(String name) {
-//        try {
-//            List<ExcelTypeDto> excelTypeDtos = new ArrayList<>();
-//            List<Order> pendingOrdersWithQuantities = customerRepo.findAllPendingOrdersWithQuantities();
-//
-//            Long filterProductId = null;
-//            if (!name.equalsIgnoreCase("all")) {
-//                Product byName = productRepo.findByName(name);
-//                if (byName != null) {
-//                    filterProductId = Long.valueOf(byName.getProductId());
-//                }
-//            }
-//
-//            LocalDate today = LocalDate.now();
-//
-//            for (Order order : pendingOrdersWithQuantities) {
-//
-//                LocalDate orderDate = order.getDeliveryDate() == null
-//                        ? null
-//                        : order.getDeliveryDate().toLocalDate();
-//
-//                // skip only future-dated orders (or null date)
-//                if (orderDate == null || orderDate.isAfter(today)) {
-//                    continue;
-//                }
-//
-//                boolean isMatch = false;
-//                StringBuilder qtyDetails = new StringBuilder();
-//
-//                for (OrderDetails od : order.getOrderDetails()) {
-//                    Long orderProductId = Long.valueOf(od.getProduct().getProductId());
-//
-//                    if (name.equalsIgnoreCase("all")) {
-//                        isMatch = true;
-//                    } else if (filterProductId != null && filterProductId.equals(orderProductId)) {
-//                        isMatch = true;
-//                    }
-//
-//                    if (isMatch) {
-//                        qtyDetails.append(" + ")
-//                                .append(od.getProduct().getName())
-//                                .append(" + ")
-//                                .append(od.getQty());
-//                    }
-//                }
-//
-//                if (isMatch) {
-//                    Customer customer = order.getCustomer();
-//                    ExcelTypeDto excelTypeDto = new ExcelTypeDto();
-//                    excelTypeDto.setId(order.getSerialNo());
-//                    excelTypeDto.setName(customer.getName());
-//                    excelTypeDto.setAddress(customer.getAddress());
-//                    excelTypeDto.setContact01(customer.getContact01());
-//                    excelTypeDto.setContact02(customer.getContact02());
-//                    excelTypeDto.setPrice(String.valueOf(order.getTotalPrice()));
-//                    excelTypeDto.setNote(order.getRemark());
-//                    excelTypeDtos.add(excelTypeDto);
-//                }
-//            }
-//
-//            return excelTypeDtos;
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//            return null;
-//        }
-//    }
 
     @Transactional
     @Override
     public String ConformOrder(List<String> serialNumbers) {
         try {
-           LocalDate today = LocalDate.now();
-           Date todayDate = Date.valueOf(today);
-           
-           for (String serialNumber : serialNumbers) {
-               System.out.println("serial Number :"+serialNumber);
-               Optional<Order> bySerialNo = orderRepo.findBySerialNo(serialNumber);
-               if (bySerialNo.isPresent()) {
-                   Order order = bySerialNo.get();
-                   order.getCustomer().setStatus("PRINTING");
-                   customerRepo.save(order.getCustomer());
-                   // Get or create DailyCount for today
-                   DailyCount dailyCount = dailyCountRepo.findByDate(todayDate).orElse(null);
-                   
-                   // If no DailyCount exists for today, create one
-                   if (dailyCount == null) {
-                       dailyCount = new DailyCount();
-                       dailyCount.setDate(todayDate);
-                       dailyCount.setLastTime(LocalDateTime.now());
-                       dailyCount.setTotalQty(0);
-                       dailyCount = dailyCountRepo.save(dailyCount);
-                   }
-                   
-                   // Process each order detail
-                   List<OrderDetails> orderDetailsList = order.getOrderDetails();
-                   if (orderDetailsList != null && !orderDetailsList.isEmpty()) {
-                       for (OrderDetails orderDetail : orderDetailsList) {
+            LocalDate today = LocalDate.now();
+            Date todayDate = Date.valueOf(today);
 
-                           Product product = orderDetail.getProduct();
+            for (String serialNumber : serialNumbers) {
+                System.out.println("serial Number :"+serialNumber);
+                Optional<Order> bySerialNo = orderRepo.findBySerialNo(serialNumber);
+                if (bySerialNo.isPresent()) {
+                    Order order = bySerialNo.get();
+                    order.getCustomer().setStatus("PRINTING");
+                    customerRepo.save(order.getCustomer());
+                    // Get or create DailyCount for today
+                    DailyCount dailyCount = dailyCountRepo.findByDate(todayDate).orElse(null);
 
-                           stockService.updateStockByName(product.getName(), orderDetail.getQty());
+                    // If no DailyCount exists for today, create one
+                    if (dailyCount == null) {
+                        dailyCount = new DailyCount();
+                        dailyCount.setDate(todayDate);
+                        dailyCount.setLastTime(LocalDateTime.now());
+                        dailyCount.setTotalQty(0);
+                        dailyCount = dailyCountRepo.save(dailyCount);
+                    }
 
-                           Integer productId = product.getProductId();
-                           String productName = product.getName();
-                           Integer qty = orderDetail.getQty();
+                    // Process each order detail
+                    List<OrderDetails> orderDetailsList = order.getOrderDetails();
+                    if (orderDetailsList != null && !orderDetailsList.isEmpty()) {
+                        for (OrderDetails orderDetail : orderDetailsList) {
 
-                           Optional<DailyCountDetails> existingDetails = dailyCountDetailsRepo
-                                   .findByDailyCountAndProductIdAndCategory(dailyCount, productId,qty);
+                            Product product = orderDetail.getProduct();
 
-                           if (existingDetails.isPresent()){
-                               DailyCountDetails dailyCountDetails = existingDetails.get();
-                               dailyCountDetails.setQty(dailyCountDetails.getQty()+1);
-                               dailyCountDetailsRepo.save(dailyCountDetails);
-                           }else {
-                               DailyCountDetails newDetails = new DailyCountDetails();
-                               newDetails.setProductId(productId);
-                               newDetails.setProductName(productName);
-                               newDetails.setQty(1);
-                               newDetails.setCategory(qty);
-                               newDetails.setDailyCount(dailyCount);
-                               newDetails.setProduct(product);
-                               dailyCountDetailsRepo.save(newDetails);
-                           }
+                            stockService.updateStockByName(product.getName(), orderDetail.getQty());
 
-                           // Update total quantity in DailyCount
-                           dailyCount.setTotalQty(dailyCount.getTotalQty() + 1);
-                       }
-                       
-                       dailyCount.setLastTime(LocalDateTime.now());
-                       dailyCountRepo.save(dailyCount);
-                   }
-               }
-           }
+                            Integer productId = product.getProductId();
+                            String productName = product.getName();
+                            Integer qty = orderDetail.getQty();
+
+                            Optional<DailyCountDetails> existingDetails = dailyCountDetailsRepo
+                                    .findByDailyCountAndProductIdAndCategory(dailyCount, productId,qty);
+
+                            if (existingDetails.isPresent()){
+                                DailyCountDetails dailyCountDetails = existingDetails.get();
+                                dailyCountDetails.setQty(dailyCountDetails.getQty()+1);
+                                dailyCountDetailsRepo.save(dailyCountDetails);
+                            }else {
+                                DailyCountDetails newDetails = new DailyCountDetails();
+                                newDetails.setProductId(productId);
+                                newDetails.setProductName(productName);
+                                newDetails.setQty(1);
+                                newDetails.setCategory(qty);
+                                newDetails.setDailyCount(dailyCount);
+                                newDetails.setProduct(product);
+                                dailyCountDetailsRepo.save(newDetails);
+                            }
+
+                            // Update total quantity in DailyCount
+                            dailyCount.setTotalQty(dailyCount.getTotalQty() + 1);
+                        }
+
+                        dailyCount.setLastTime(LocalDateTime.now());
+                        dailyCountRepo.save(dailyCount);
+                    }
+                }
+            }
         } catch (Exception e) {
             System.out.println("message is : " + e.getMessage());
             e.printStackTrace();
             return null;
-    }
+        }
         return "success";
     }
 
@@ -306,7 +305,7 @@ public class DashBoardServiceImpl implements DashBoardService {
         LocalDateTime startDateTime = startDate.atStartOfDay();
 
         if (user.getRole().equals("SUPER USER") || user.getRole().equals("ADMIN")) {
-            
+
             return Math.toIntExact(orderRepo.sumQtyAfterDate(startDateTime));
         }
 
@@ -364,11 +363,49 @@ public class DashBoardServiceImpl implements DashBoardService {
                 user.getId(), "Delivered", startDateTime, endDateTime));
     }
 
+//    @Override
+//    public int getCancelOrder(UserDto user) {
+//
+//        LocalDate today = LocalDate.now();
+//        String cancelStatus = "Returned to Client";
+//
+//        LocalDate startDate;
+//
+//        if (today.getDayOfMonth() >= 15) {
+//            // This month 15
+//            startDate = LocalDate.of(today.getYear(), today.getMonth(), 15);
+//        } else {
+//            // Previous month 15
+//            LocalDate previousMonth = today.minusMonths(1);
+//            startDate = LocalDate.of(previousMonth.getYear(), previousMonth.getMonth(), 15);
+//        }
+//
+//        LocalDateTime startDateTime = startDate.atStartOfDay();
+//        LocalDateTime endDateTime = LocalDateTime.now();
+//
+//        if (user.getRole().equals("SUPER USER") || user.getRole().equals("ADMIN")) {
+//            return Math.toIntExact(orderRepo.countByStatusAndDateRange(cancelStatus, startDateTime, endDateTime));
+//        }
+//
+//        return Math.toIntExact(orderRepo.countByCustomerUserIdAndStatusAndDateBetween(
+//                user.getId(), cancelStatus, startDateTime, endDateTime));
+//    }
+
     @Override
     public int getCancelOrder(UserDto user) {
 
+        List<String> returnStatuses = Arrays.asList(
+                "FAILED TO DELIVER",
+                "RETURNED TO BRANCH FAILED",
+                "RETURNED TO HO",
+                "COLLECT FROM RETURN SHUTTLE",
+                "COLLECT FROM WAREHOUSE (RETURN ORDER)",
+                "RECEIVED AT HO (RETURNED ITEM)",
+                "RETURNED TO CLIENT",
+                "RECEIVED BY CLIENT"
+        );
+
         LocalDate today = LocalDate.now();
-        String cancelStatus = "Returned to Client";
 
         LocalDate startDate;
 
@@ -385,11 +422,23 @@ public class DashBoardServiceImpl implements DashBoardService {
         LocalDateTime endDateTime = LocalDateTime.now();
 
         if (user.getRole().equals("SUPER USER") || user.getRole().equals("ADMIN")) {
-            return Math.toIntExact(orderRepo.countByStatusAndDateRange(cancelStatus, startDateTime, endDateTime));
+            return Math.toIntExact(
+                    orderRepo.countByStatusInAndDateBetween(
+                            returnStatuses,
+                            startDateTime,
+                            endDateTime
+                    )
+            );
         }
 
-        return Math.toIntExact(orderRepo.countByCustomerUserIdAndStatusAndDateBetween(
-                user.getId(), cancelStatus, startDateTime, endDateTime));
+        return Math.toIntExact(
+                orderRepo.countByCustomerUserIdAndStatusInAndDateBetween(
+                        user.getId(),
+                        returnStatuses,
+                        startDateTime,
+                        endDateTime
+                )
+        );
     }
 
 
@@ -411,7 +460,7 @@ public class DashBoardServiceImpl implements DashBoardService {
 
         LocalDateTime startDateTime = startDate.atStartOfDay();
         LocalDateTime endDateTime = LocalDateTime.now();
-        
+
         long resultCount = orderRepo.countByCustomerUserIdAndStatusAndDateBetween(
                 user.getId(), "Delivered", startDateTime, endDateTime);
 
@@ -437,7 +486,7 @@ public class DashBoardServiceImpl implements DashBoardService {
 
         LocalDateTime startDateTime = startDate.atStartOfDay();
         LocalDateTime endDateTime = LocalDateTime.now();
-        
+
         return Math.toIntExact(orderRepo.countByCustomerUserIdAndStatusAndDateBetween(
                 user.getId(), cancelStatus, startDateTime, endDateTime));
     }
