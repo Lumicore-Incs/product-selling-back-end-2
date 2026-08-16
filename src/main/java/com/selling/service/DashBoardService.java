@@ -2,9 +2,11 @@ package com.selling.service;
 
 import com.selling.dto.UserDto;
 import com.selling.dto.get.ExcelTypeDto;
-import com.selling.dto.get.GetUserDetailsDto;
+import com.selling.dto.get.WeeklyUserOrderDto;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 public interface DashBoardService {
     List<ExcelTypeDto> findOrder(String name);
@@ -26,4 +28,9 @@ public interface DashBoardService {
     List<Object> findOrderQty();
 
     int processingOrders(UserDto userDto);
+
+    Map<String, Integer> DailyUsersOrders(LocalDate date);
+
+    List<WeeklyUserOrderDto> findWeeklyOrder();
+
 }
