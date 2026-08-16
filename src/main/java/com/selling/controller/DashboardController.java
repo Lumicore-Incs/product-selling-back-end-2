@@ -1,14 +1,18 @@
 package com.selling.controller;
 
 import java.io.ByteArrayInputStream;
+import java.time.LocalDate;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import com.selling.dto.OrderDto;
 import com.selling.dto.get.GetUserDetailsDto;
+import com.selling.dto.get.WeeklyUserOrderDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -172,6 +176,52 @@ public class DashboardController {
       List<Object> entities = dashBoardService.findOrderQty();
       return new ResponseEntity<>(entities, HttpStatus.OK);
 
+    } catch (Exception e) {
+      return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
+              HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @GetMapping("/weekly_orders")
+  public ResponseEntity<Object> weeklyChartOrders(
+          @RequestHeader(name = "Authorization") String authorizationHeader) {
+
+    try {
+
+      if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
+        return new ResponseEntity<>(
+                TokenStatus.TOKEN_INVALID,
+                HttpStatus.UNAUTHORIZED
+        );
+      }
+
+      List<WeeklyUserOrderDto> entities =
+              dashBoardService.findWeeklyOrder();
+
+      return new ResponseEntity<>(
+              entities,
+              HttpStatus.OK
+      );
+
+    } catch (Exception e) {
+
+      return new ResponseEntity<>(
+              "Error retrieving weekly orders: " + e.getMessage(),
+              HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @GetMapping("/daily_orders/{date}")
+  public ResponseEntity<Object> DailyUsersOrders(@RequestHeader(name = "Authorization") String authorizationHeader,
+                                                 @PathVariable("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+    try {
+      if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
+        return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
+      }
+
+      Map<String, Integer> entities = dashBoardService.DailyUsersOrders(date);
+      return new ResponseEntity<>(entities, HttpStatus.OK);
     } catch (Exception e) {
       return new ResponseEntity<>("Error retrieving products: " + e.getMessage(),
               HttpStatus.INTERNAL_SERVER_ERROR);

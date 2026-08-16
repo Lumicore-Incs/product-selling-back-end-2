@@ -1,15 +1,15 @@
 package com.selling.service.impl;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.sql.Date;
 import java.util.stream.Collectors;
 
-import com.selling.dto.get.GetUserDetailsDto;
+import com.selling.dto.get.WeeklyUserOrderDto;
 import com.selling.model.*;
 import com.selling.service.StockService;
-import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -541,5 +541,80 @@ public class DashBoardServiceImpl implements DashBoardService {
 
         return Math.toIntExact(orderRepo.countByCustomerUserIdAndProcessingOrdersAndDateBetween(
                 user.getId(), "Processing", startDateTime, endDateTime));
+    }
+
+    @Override
+    public Map<String, Integer> DailyUsersOrders(LocalDate date) {
+
+        List<Object[]> results = orderRepo.getDailyUserOrders(date);
+
+        Map<String, Integer> userOrders = new HashMap<>();
+
+        for (Object[] row : results) {
+
+            String userName = (String) row[0];
+            Integer qty = ((Number) row[1]).intValue();
+
+            userOrders.put(userName, qty);
+        }
+
+        return userOrders;
+    }
+
+    @Override
+    public List<WeeklyUserOrderDto> findWeeklyOrder() {
+
+        LocalDate today = LocalDate.now();
+
+        // Monday
+        LocalDate startOfWeek =
+                today.with(DayOfWeek.MONDAY);
+
+        // Next Monday
+        LocalDate endOfWeek =
+                startOfWeek.plusDays(7);
+
+        LocalDateTime startDate =
+                startOfWeek.atStartOfDay();
+
+        LocalDateTime endDate =
+                endOfWeek.atStartOfDay();
+
+        List<Object[]> results =
+                orderRepo.findWeeklyUserOrders(
+                        startDate,
+                        endDate
+                );
+
+        Map<LocalDate, Map<String, Integer>> grouped =
+                new LinkedHashMap<>();
+
+        for (Object[] row : results) {
+
+            LocalDate date = ((java.sql.Date) row[0]).toLocalDate();
+
+            String userName = (String) row[1];
+
+            Integer qty = ((Number) row[2]).intValue();
+
+            grouped
+                    .computeIfAbsent(date, k -> new LinkedHashMap<>())
+                    .put(userName, qty);
+        }
+
+        List<WeeklyUserOrderDto> response = new ArrayList<>();
+
+        for (Map.Entry<LocalDate, Map<String, Integer>> entry
+                : grouped.entrySet()) {
+
+            response.add(
+                    new WeeklyUserOrderDto(
+                            entry.getKey().getDayOfWeek().toString(),
+                            entry.getValue()
+                    )
+            );
+        }
+
+        return response;
     }
 }
