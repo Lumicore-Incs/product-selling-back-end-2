@@ -26,25 +26,50 @@ public class StockServiceImpl implements StockService {
 
     @Override
     public StockDto saveStock(StockDetailsDto stockDetails) {
-        Stock stock = stockRepo.findTopByType(stockDetails.getType());
+        Stock stock;
 
-        if (stock == null) {
-            stock = new Stock();
-            stock.setType(stockDetails.getType());
-            stock.setTotalQuantity(stockDetails.getQuantity());
-            stock.setStatus(stockDetails.getStatus());
-            stock = stockRepo.save(stock);
+        if (stockDetails.getStatus() != null && "DAMAGE".equalsIgnoreCase(stockDetails.getStatus())) {
+            // For DAMAGE status, search for an existing DAMAGE stock of this type
+            stock = stockRepo.findTopByTypeAndStatus(stockDetails.getType(), "DAMAGE");
+
+            if (stock == null) {
+                stock = new Stock();
+                stock.setType(stockDetails.getType());
+                stock.setTotalQuantity(stockDetails.getQuantity());
+                stock.setStatus("DAMAGE");
+                stock = stockRepo.save(stock);
+            } else {
+                stock.setTotalQuantity(stock.getTotalQuantity() + stockDetails.getQuantity());
+                stock = stockRepo.save(stock);
+            }
         } else {
-            System.out.println("2");
-            stock.setTotalQuantity(stock.getTotalQuantity() + stockDetails.getQuantity());
-            stock = stockRepo.save(stock);
+            // For standard status, search for an existing non-damage stock of this type
+            stock = stockRepo.findTopByTypeAndStatusNotDamage(stockDetails.getType());
+
+            if (stock == null) {
+                stock = new Stock();
+                stock.setType(stockDetails.getType());
+                stock.setTotalQuantity(stockDetails.getQuantity());
+                stock.setStatus(stockDetails.getStatus());
+                stock = stockRepo.save(stock);
+            } else {
+                stock.setTotalQuantity(stock.getTotalQuantity() + stockDetails.getQuantity());
+                if (stock.getStatus() == null && stockDetails.getStatus() != null) {
+                    stock.setStatus(stockDetails.getStatus());
+                }
+                stock = stockRepo.save(stock);
+            }
         }
 
         StockDetails newDetail = new StockDetails();
         newDetail.setQty(stockDetails.getQuantity());
         newDetail.setStatus(stockDetails.getStatus());
         newDetail.setType(stockDetails.getType());
-        newDetail.setDate(stockDetails.getDate());
+        if (stockDetails.getDate() == null) {
+            newDetail.setDate(new java.sql.Date(System.currentTimeMillis()));
+        } else {
+            newDetail.setDate(stockDetails.getDate());
+        }
         newDetail.setStock(stock);
         stockDetailsRepo.save(newDetail);
 
@@ -70,9 +95,13 @@ public class StockServiceImpl implements StockService {
     @Override
     public StockDto updateStock(Integer id, StockDto stockDto) {
         Optional<Stock> byId = stockRepo.findById(id);
-        Stock stock1 = dtoToEntity(stockDto);
         if (byId.isPresent()) {
             Stock stock = byId.get();
+            // DAMAGE stock cannot be updated
+            if (stock.getStatus() != null && stock.getStatus().equalsIgnoreCase("DAMAGE")) {
+                return null;
+            }
+            Stock stock1 = dtoToEntity(stockDto);
             stock1.setStock_id(stock.getStock_id());
             stockRepo.save(stock1);
             return entityToDto(stock1);
