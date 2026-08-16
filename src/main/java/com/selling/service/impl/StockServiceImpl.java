@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
+import java.sql.Date;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -28,7 +29,6 @@ public class StockServiceImpl implements StockService {
         Stock stock = stockRepo.findTopByType(stockDetails.getType());
 
         if (stock == null) {
-            System.out.println("1");
             stock = new Stock();
             stock.setType(stockDetails.getType());
             stock.setTotalQuantity(stockDetails.getQuantity());
@@ -82,9 +82,15 @@ public class StockServiceImpl implements StockService {
 
     @Override
     public boolean deleteStock(Integer id) {
-        Optional<Stock> byId = stockRepo.findById(id);
-        if (byId.isPresent()) {
-            stockRepo.deleteById(id);
+        Optional<StockDetails> detailsOpt = stockDetailsRepo.findById(id);
+        if (detailsOpt.isPresent()) {
+            StockDetails details = detailsOpt.get();
+            Stock stock = details.getStock();
+            if (stock != null) {
+                stock.setTotalQuantity(stock.getTotalQuantity() - details.getQty());
+                stockRepo.save(stock);
+            }
+            stockDetailsRepo.deleteById(id);
             return true;
         }
         return false;
@@ -152,5 +158,46 @@ public class StockServiceImpl implements StockService {
 
     public StockDto entityToDto(Stock stock) {
         return modelMapper.map(stock, StockDto.class);
+    }
+
+    public StockDetailsDto entityToDetailsDto(StockDetails details) {
+        StockDetailsDto dto = new StockDetailsDto();
+        dto.setId(details.getId());
+        dto.setQuantity(details.getQty() != null ? details.getQty() : 0);
+        dto.setDate(details.getDate());
+        dto.setStatus(details.getStatus());
+        dto.setType(details.getType());
+        if (details.getStock() != null) {
+            dto.setStock_id(String.valueOf(details.getStock().getStock_id()));
+        }
+        return dto;
+    }
+
+    @Override
+    public List<StockDetailsDto> getStockDetails(String type, String status, Date date, String month) {
+        Date startDate = null;
+        if (month != null && !month.trim().isEmpty()) {
+            java.util.Calendar cal = java.util.Calendar.getInstance();
+            if ("1".equalsIgnoreCase(month) || "one".equalsIgnoreCase(month) || "1 month".equalsIgnoreCase(month) || "all".equalsIgnoreCase(month)) {
+                cal.add(java.util.Calendar.MONTH, -1);
+                startDate = new Date(cal.getTimeInMillis());
+            } else if ("2".equalsIgnoreCase(month) || "two".equalsIgnoreCase(month) || "2 months".equalsIgnoreCase(month)) {
+                cal.add(java.util.Calendar.MONTH, -2);
+                startDate = new Date(cal.getTimeInMillis());
+            }
+        }
+
+        List<StockDetails> list = stockDetailsRepo.filterStockDetails(
+                (type == null || type.trim().isEmpty()) ? null : type,
+                (status == null || status.trim().isEmpty()) ? null : status,
+                date,
+                startDate
+        );
+
+        List<StockDetailsDto> dtos = new ArrayList<>();
+        for (StockDetails detail : list) {
+            dtos.add(entityToDetailsDto(detail));
+        }
+        return dtos;
     }
 }
