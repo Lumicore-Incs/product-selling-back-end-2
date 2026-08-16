@@ -12,9 +12,11 @@ import java.sql.Date;
 @NoArgsConstructor
 @Data
 @ToString
-public class StockDto {
-    private Integer stock_id;
-    private String type;
-    private int totalQuantity;
+public class StockDetailsDto {
+    private Integer id;
+    private int quantity;
+    private Date date;
     private String status;
+    private String type;
+    private String stock_id;
 }

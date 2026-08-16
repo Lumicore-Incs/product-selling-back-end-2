@@ -13,7 +13,8 @@ public interface StockRepo extends JpaRepository<Stock, Integer> {
     @Query("SELECT s FROM Stock s WHERE s.type = :type ORDER BY s.stock_id DESC LIMIT 1")
     Stock findTopByType(@Param("type") String type);
 
-    List<Stock> findAllByOrderByDateDesc();
+    @Query("SELECT s FROM Stock s ORDER BY s.stock_id DESC")
+    List<Stock> findAllByOrderByIdDesc();
 
 
 }

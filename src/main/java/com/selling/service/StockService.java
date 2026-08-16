@@ -1,13 +1,13 @@
 package com.selling.service;
 
 
+import com.selling.dto.StockDetailsDto;
 import com.selling.dto.StockDto;
-import com.selling.model.OrderDetails;
 
 import java.util.List;
 
 public interface StockService {
-    StockDto saveStock(StockDto stockDto);
+    StockDto saveStock(StockDetailsDto stockDto);
 
     StockDto getStockById(Long aLong);
 

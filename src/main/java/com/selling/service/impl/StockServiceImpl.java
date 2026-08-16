@@ -1,9 +1,11 @@
 package com.selling.service.impl;
 
+import com.selling.dto.StockDetailsDto;
 import com.selling.dto.StockDto;
-import com.selling.model.OrderDetails;
 import com.selling.model.Stock;
+import com.selling.model.StockDetails;
 import com.selling.repository.StockRepo;
+import com.selling.repository.StockDetailsRepo;
 import com.selling.service.StockService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
@@ -18,52 +20,33 @@ import java.util.Optional;
 public class StockServiceImpl implements StockService {
 
     private final StockRepo stockRepo;
+    private final StockDetailsRepo stockDetailsRepo;
     private final ModelMapper modelMapper;
 
     @Override
-    public StockDto saveStock(StockDto stockDto) {
+    public StockDto saveStock(StockDetailsDto stockDetails) {
+        Stock stock = stockRepo.findTopByType(stockDetails.getType());
 
-        Stock stock = dtoToEntity(stockDto);
-
-        // Damage stock නම් direct save
-        if (stock.getStatus() != null &&
-                stock.getStatus().equalsIgnoreCase("DAMAGE")) {
-
-            stockRepo.save(stock);
-            return entityToDto(stock);
+        if (stock == null) {
+            System.out.println("1");
+            stock = new Stock();
+            stock.setType(stockDetails.getType());
+            stock.setTotalQuantity(stockDetails.getQuantity());
+            stock.setStatus(stockDetails.getStatus());
+            stock = stockRepo.save(stock);
+        } else {
+            System.out.println("2");
+            stock.setTotalQuantity(stock.getTotalQuantity() + stockDetails.getQuantity());
+            stock = stockRepo.save(stock);
         }
 
-        // Same product stocks ගන්න
-        List<Stock> existingStocks = stockRepo.findAllByType(stock.getType());
-
-        int remainingQty = stock.getQuantity();
-
-        // Existing stock වලින් quantity adjust කරන්න
-        for (Stock existingStock : existingStocks) {
-
-            if (existingStock.getStatus() != null &&
-                    existingStock.getStatus().equalsIgnoreCase("DAMAGE")) {
-                continue;
-            }
-
-            int currentQty = existingStock.getQuantity();
-
-            if (currentQty + remainingQty >= 0) {
-                existingStock.setQuantity(currentQty + remainingQty);
-                remainingQty = 0;
-                stockRepo.save(existingStock);
-                break;
-            } else {
-                remainingQty += currentQty;
-                existingStock.setQuantity(0);
-                stockRepo.save(existingStock);
-            }
-        }
-
-        // Balance quantity එක අලුත් stock record එකට save කරන්න
-        stock.setQuantity(remainingQty);
-
-        stockRepo.save(stock);
+        StockDetails newDetail = new StockDetails();
+        newDetail.setQty(stockDetails.getQuantity());
+        newDetail.setStatus(stockDetails.getStatus());
+        newDetail.setType(stockDetails.getType());
+        newDetail.setDate(stockDetails.getDate());
+        newDetail.setStock(stock);
+        stockDetailsRepo.save(newDetail);
 
         return entityToDto(stock);
     }
@@ -76,10 +59,9 @@ public class StockServiceImpl implements StockService {
 
     @Override
     public List<StockDto> getAllStock() {
-        List<Stock> all = stockRepo.findAllByOrderByDateDesc();
+        List<Stock> all = stockRepo.findAllByOrderByIdDesc();
         List<StockDto> stockDtos = new ArrayList<>();
         for (Stock stock : all) {
-            entityToDto(stock);
             stockDtos.add(entityToDto(stock));
         }
         return stockDtos;
@@ -91,12 +73,9 @@ public class StockServiceImpl implements StockService {
         Stock stock1 = dtoToEntity(stockDto);
         if (byId.isPresent()) {
             Stock stock = byId.get();
-            if (stock.getQuantity()==stock.getTotalQuantity()) {
-                stock1.setStock_id(stock.getStock_id());
-                stockRepo.save(stock1);
-                return entityToDto(stock1);
-            }
-            return null;
+            stock1.setStock_id(stock.getStock_id());
+            stockRepo.save(stock1);
+            return entityToDto(stock1);
         }
         return null;
     }
@@ -105,11 +84,8 @@ public class StockServiceImpl implements StockService {
     public boolean deleteStock(Integer id) {
         Optional<Stock> byId = stockRepo.findById(id);
         if (byId.isPresent()) {
-            if (byId.get().getQuantity()==byId.get().getTotalQuantity()) {
-                stockRepo.deleteById(id);
-                return true;
-            }
-            return false;
+            stockRepo.deleteById(id);
+            return true;
         }
         return false;
     }
@@ -147,14 +123,14 @@ public class StockServiceImpl implements StockService {
                 break;
             }
 
-            int currentQty = stock.getQuantity();
+            int currentQty = stock.getTotalQuantity();
 
             if (currentQty >= remainingQty) {
-                stock.setQuantity(currentQty - remainingQty);
+                stock.setTotalQuantity(currentQty - remainingQty);
                 remainingQty = 0;
             } else {
                 remainingQty -= currentQty;
-                stock.setQuantity(0);
+                stock.setTotalQuantity(0);
             }
 
             stockRepo.save(stock);
@@ -162,11 +138,15 @@ public class StockServiceImpl implements StockService {
 
         // Stock මදි නම් අන්තිම stock එක negative කරන්න
         if (remainingQty > 0 && lastUpdatedStock != null) {
-            lastUpdatedStock.setQuantity(lastUpdatedStock.getQuantity() - remainingQty);
+            lastUpdatedStock.setTotalQuantity(lastUpdatedStock.getTotalQuantity() - remainingQty);
             stockRepo.save(lastUpdatedStock);
         }
     }
     public Stock dtoToEntity(StockDto stockDto) {
+        return modelMapper.map(stockDto, Stock.class);
+    }
+
+    public Stock stockDetailsDtoToEntity(StockDetails stockDto) {
         return modelMapper.map(stockDto, Stock.class);
     }
 

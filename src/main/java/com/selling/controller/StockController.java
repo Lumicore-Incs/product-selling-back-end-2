@@ -1,5 +1,6 @@
 package com.selling.controller;
 
+import com.selling.dto.StockDetailsDto;
 import com.selling.dto.StockDto;
 import com.selling.service.StockService;
 import com.selling.util.JWTTokenGenerator;
@@ -25,12 +26,12 @@ public class StockController {
     @PostMapping
     public ResponseEntity<Object> savedStock(
             @RequestHeader(name = "Authorization") String authorizationHeader,
-            @RequestBody StockDto stockDto) {
+            @RequestBody StockDetailsDto stockDetails) {
         try {
             if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
                 return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
             }
-            StockDto savedStock = stockService.saveStock(stockDto);
+            StockDto savedStock = stockService.saveStock(stockDetails);
             return new ResponseEntity<>(savedStock, HttpStatus.CREATED);
         } catch (Exception e) {
             return new ResponseEntity<>("Error saving stock: " + e.getMessage(),
