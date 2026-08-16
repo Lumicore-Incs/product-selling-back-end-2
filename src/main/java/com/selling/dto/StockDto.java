@@ -17,4 +17,11 @@ public class StockDto {
     private String type;
     private int totalQuantity;
     private String status;
+
+    public StockDto(Integer stock_id, String type, Integer totalQuantity, String status) {
+        this.stock_id = stock_id;
+        this.type = type;
+        this.totalQuantity = totalQuantity;
+        this.status = status;
+    }
 }

@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.sql.Date;
+import java.util.Map;
 
 @CrossOrigin()
 @RestController
@@ -94,6 +95,21 @@ public class StockController {
             }
             List<StockDetailsDto> details = stockService.getStockDetails(type, status, date, month);
             return new ResponseEntity<>(details, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error retrieving stock details: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/stockQty")
+    public ResponseEntity<Object> getStockDetails(
+            @RequestHeader(name = "Authorization") String authorizationHeader) {
+        try {
+            if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
+                return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
+            }
+            List<StockDto> entities = stockService.getStockQty();
+            return new ResponseEntity<>(entities, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>("Error retrieving stock details: " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR);

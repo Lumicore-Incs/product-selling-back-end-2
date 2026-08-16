@@ -1,5 +1,6 @@
 package com.selling.repository;
 
+import com.selling.dto.StockDto;
 import com.selling.model.Stock;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -23,4 +24,14 @@ public interface StockRepo extends JpaRepository<Stock, Integer> {
     List<Stock> findAllByOrderByIdDesc();
 
 
+    @Query("""
+    SELECT new com.selling.dto.StockDto(
+        s.stock_id,
+        s.type,
+        s.totalQuantity,
+        s.status
+    )
+    FROM Stock s
+""")
+    List<StockDto> getStockQty();
 }

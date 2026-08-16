@@ -223,4 +223,9 @@ public class StockServiceImpl implements StockService {
         }
         return dtos;
     }
+
+    @Override
+    public List<StockDto> getStockQty() {
+        return stockRepo.getStockQty();
+    }
 }
