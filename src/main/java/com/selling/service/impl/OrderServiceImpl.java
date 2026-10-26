@@ -1,19 +1,17 @@
 package com.selling.service.impl;
 
-import static com.selling.dto.ApiResponse.success;
-
-import java.sql.Date;
-import java.time.LocalDateTime;
-import java.time.LocalDate;
-import java.time.YearMonth;
-import java.time.ZoneId;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.stream.Collectors;
-
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.selling.dto.*;
 import com.selling.dto.get.MonthlyOrderReportDtoGet;
+import com.selling.dto.get.OrderDetailsDtoGet;
+import com.selling.dto.get.OrderDtoGet;
 import com.selling.model.*;
 import com.selling.repository.*;
+import com.selling.service.OrderService;
+import com.selling.util.MapperService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,21 +22,25 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.selling.dto.CustomerDto;
-import com.selling.dto.CustomerRequestDTO;
-import com.selling.dto.PaginationResponse;
-import com.selling.dto.ProductDto;
-import com.selling.dto.TrackingDto;
-import com.selling.dto.UserDto;
-import com.selling.dto.get.OrderDetailsDtoGet;
-import com.selling.dto.get.OrderDtoGet;
-import com.selling.service.OrderService;
-import com.selling.util.MapperService;
+import java.sql.Date;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.ZoneId;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
-import lombok.RequiredArgsConstructor;
+import static com.selling.dto.ApiResponse.success;
+
+import com.selling.model.Order;
+import com.selling.util.OrderSpecification;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 @Service
 @RequiredArgsConstructor
@@ -257,7 +259,7 @@ public class OrderServiceImpl implements OrderService {
             MonthlyOrderReportDtoGet dto = reportMap.getOrDefault(
                     orderDate,
                     new MonthlyOrderReportDtoGet(
-                            java.sql.Date.valueOf(orderDate),
+                            Date.valueOf(orderDate),
                             0,
                             0
                     )
@@ -295,20 +297,6 @@ public class OrderServiceImpl implements OrderService {
                                                                              String search, String status, Integer productId) {
         List<Order> userOrders = orderRepo.findByUser(mapperService.map(userDto, User.class));
         return buildFilteredPaginatedResponse(userOrders, page, size, search, status, productId, null, true, null);
-    }
-
-    @Override
-    public PaginationResponse<OrderDtoGet> getAllOrderPaginated(int page, int size, String search, String status,
-                                                                Integer productId, Date date) {
-        List<Order> allOrders = orderRepo.findAllByOrderByOrderIdDesc();
-        return buildFilteredPaginatedResponse(allOrders, page, size, search, status, productId, date, false, null);
-    }
-
-    @Override
-    public PaginationResponse<OrderDtoGet> getAllOrderByUserIdPaginated(UserDto userDto, int page, int size,
-                                                                        String search, String status, Integer productId, Date date) {
-        List<Order> userOrders = orderRepo.findByUserOrderByOrderIdDesc(mapperService.map(userDto, User.class));
-        return buildFilteredPaginatedResponse(userOrders, page, size, search, status, productId, date, false, null);
     }
 
 
@@ -666,7 +654,7 @@ public class OrderServiceImpl implements OrderService {
             Order savedOrder = orderRepo.save(order);
 
             // Delete existing Order Details
-           // orderDetailsRepo.deleteByOrder(savedOrder);
+            // orderDetailsRepo.deleteByOrder(savedOrder);
             // OR
             orderDetailsRepo.deleteAllByOrder(savedOrder);
 
@@ -747,5 +735,298 @@ public class OrderServiceImpl implements OrderService {
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error deleting order: " + e.getMessage());
         }
+    }
+
+
+    @Override
+    public PaginationResponse<OrderDtoGet> getAllOrderPaginated(
+            int page,
+            int size,
+            String search,
+            String status,
+            Integer productId,
+            Date date) {
+
+        try {
+
+            if (size <= 0) {
+                throw new IllegalArgumentException(
+                        "Page size must be greater than zero"
+                );
+            }
+
+            page = Math.max(page, 0);
+
+            // Convert Date to LocalDate
+            LocalDate filterDate = null;
+
+            if (date != null) {
+                filterDate = date.toInstant()
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDate();
+            }
+
+            // Database pagination and sorting
+            Pageable pageable = PageRequest.of(
+                    page,
+                    size,
+                    Sort.by(
+                            Sort.Order.desc("date"),
+                            Sort.Order.desc("orderId")
+                    )
+            );
+
+            // Dynamic filters
+            Specification<Order> specification =
+                    OrderSpecification.filterOrders(
+                            search,
+                            status,
+                            productId,
+                            filterDate,
+                            false,
+                            null
+                    );
+
+            // Fetch only the requested page
+            Page<Order> orderPage =
+                    orderRepo.findAll(specification, pageable);
+
+            // Convert current page to DTOs
+            List<OrderDtoGet> content =
+                    orderPage.getContent()
+                            .stream()
+                            .map(order -> {
+
+                                OrderDtoGet dto =
+                                        mapperService.map(
+                                                order,
+                                                OrderDtoGet.class
+                                        );
+
+                                dto.setCustomer(
+                                        mapperService.map(
+                                                order.getCustomer(),
+                                                CustomerDto.class
+                                        )
+                                );
+
+                                dto.setOrderDetails(
+                                        getOrderDetailsData(order)
+                                );
+
+                                return dto;
+                            })
+                            .collect(Collectors.toList());
+
+            // Build response
+            PaginationResponse<OrderDtoGet> response =
+                    new PaginationResponse<>();
+
+            response.setContent(content);
+            response.setPageNumber(orderPage.getNumber());
+            response.setPageSize(orderPage.getSize());
+            response.setTotalElements(
+                    orderPage.getTotalElements()
+            );
+            response.setTotalPages(
+                    orderPage.getTotalPages()
+            );
+            response.setLastPage(
+                    orderPage.isLast()
+            );
+
+            return response;
+
+        } catch (Exception e) {
+
+            throw new RuntimeException(
+                    "Error fetching paginated orders",
+                    e
+            );
+        }
+    }
+
+    @Override
+    public PaginationResponse<OrderDtoGet> getAllOrderByUserIdPaginated(
+            UserDto userDto,
+            int page,
+            int size,
+            String search,
+            String status,
+            Integer productId,
+            Date date) {
+
+        try {
+
+            if (userDto == null || userDto.getId() == null) {
+                throw new IllegalArgumentException(
+                        "User ID is required"
+                );
+            }
+
+            if (size <= 0) {
+                throw new IllegalArgumentException(
+                        "Page size must be greater than zero"
+                );
+            }
+
+            page = Math.max(page, 0);
+
+            Integer userId = Math.toIntExact(userDto.getId());
+
+            LocalDate filterDate = null;
+
+            if (date != null) {
+                filterDate = date.toInstant()
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDate();
+            }
+
+            Pageable pageable = PageRequest.of(
+                    page,
+                    size,
+                    Sort.by(
+                            Sort.Order.desc("date"),
+                            Sort.Order.desc("orderId")
+                    )
+            );
+
+            Specification<Order> specification =
+                    OrderSpecification.filterOrders(
+                            search,
+                            status,
+                            productId,
+                            filterDate,
+                            false,
+                            userId
+                    );
+
+            // Fetch only this user's requested page
+            Page<Order> orderPage =
+                    orderRepo.findAll(specification, pageable);
+
+            // Fetch details for this page in one batch
+            Map<Integer, List<OrderDetailsDtoGet>> detailsByOrderId =
+                    getOrderDetailsDataBatch(orderPage.getContent());
+
+            List<OrderDtoGet> content =
+                    orderPage.getContent()
+                            .stream()
+                            .map(order -> {
+
+                                OrderDtoGet dto =
+                                        mapperService.map(
+                                                order,
+                                                OrderDtoGet.class
+                                        );
+
+                                dto.setCustomer(
+                                        mapperService.map(
+                                                order.getCustomer(),
+                                                CustomerDto.class
+                                        )
+                                );
+
+                                dto.setOrderDetails(
+                                        getOrderDetailsDataForOrder(
+                                                detailsByOrderId,
+                                                order
+                                        )
+                                );
+
+                                return dto;
+                            })
+                            .collect(Collectors.toList());
+
+            PaginationResponse<OrderDtoGet> response =
+                    new PaginationResponse<>();
+
+            response.setContent(content);
+            response.setPageNumber(orderPage.getNumber());
+            response.setPageSize(orderPage.getSize());
+            response.setTotalElements(
+                    orderPage.getTotalElements()
+            );
+            response.setTotalPages(
+                    orderPage.getTotalPages()
+            );
+            response.setLastPage(
+                    orderPage.isLast()
+            );
+
+            return response;
+
+        } catch (Exception e) {
+
+            throw new RuntimeException(
+                    "Error fetching paginated user orders",
+                    e
+            );
+        }
+    }
+
+    private List<OrderDetailsDtoGet> getOrderDetailsDataForOrder(
+            Map<Integer, List<OrderDetailsDtoGet>> detailsByOrderId,
+            Order order) {
+
+        return detailsByOrderId.getOrDefault(
+                order.getOrderId(),
+                Collections.emptyList()
+        );
+    }
+
+    private Map<Integer, List<OrderDetailsDtoGet>> getOrderDetailsDataBatch(
+            List<Order> orders) {
+
+        if (orders == null || orders.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<Integer> orderIds = orders.stream()
+                .map(Order::getOrderId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (orderIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        // Fetch all details for this page in one query
+        List<OrderDetails> allDetails =
+                orderDetailsRepo.findByOrder_OrderIdIn(orderIds);
+
+        Map<Integer, List<OrderDetailsDtoGet>> result = new HashMap<>();
+
+        for (OrderDetails detail : allDetails) {
+
+            if (detail == null || detail.getOrder() == null) {
+                continue;
+            }
+
+            OrderDetailsDtoGet dto =
+                    mapperService.map(
+                            detail,
+                            OrderDetailsDtoGet.class
+                    );
+
+            dto.setProductId(
+                    detail.getProduct() == null
+                            ? null
+                            : mapperService.map(
+                            detail.getProduct(),
+                            ProductDto.class
+                    )
+            );
+
+            Integer orderId = detail.getOrder().getOrderId();
+
+            result.computeIfAbsent(
+                    orderId,
+                    key -> new ArrayList<>()
+            ).add(dto);
+        }
+
+        return result;
     }
 }

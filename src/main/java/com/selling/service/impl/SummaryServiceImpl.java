@@ -68,7 +68,7 @@ public class SummaryServiceImpl implements SummaryService {
             deliveredCount += orderQty;
 //            totalPrice = totalPrice.add(order.getTotalPrice() != null ? order.getTotalPrice() : BigDecimal.ZERO);
             
-            LocalDate orderDate = order.getDate().toLocalDate();
+            LocalDate orderDate = order.getDeliveryDate().toLocalDate();
             BigDecimal orderTotal = order.getTotalPrice() != null ? order.getTotalPrice() : BigDecimal.ZERO;
 
             if (groupedDetails.containsKey(orderDate)) {

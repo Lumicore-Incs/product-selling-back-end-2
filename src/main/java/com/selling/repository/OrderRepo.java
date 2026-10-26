@@ -1,20 +1,20 @@
 package com.selling.repository;
 
+import com.selling.model.Customer;
+import com.selling.model.Order;
+import com.selling.model.User;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.data.jpa.repository.EntityGraph;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-
-import com.selling.model.Customer;
-import com.selling.model.Order;
-import com.selling.model.User;
-
-public interface OrderRepo extends JpaRepository<Order, Integer> {
+public interface OrderRepo extends JpaRepository<Order, Integer>, JpaSpecificationExecutor<Order> {
     @EntityGraph(attributePaths = {"customer", "orderDetails", "orderDetails.product"})
     List<Order> findByUser(User userId);
 
@@ -57,6 +57,8 @@ public interface OrderRepo extends JpaRepository<Order, Integer> {
 
     // serialNo මගින් Order සොයාගැනීම
     Optional<Order> findBySerialNo(String serialNo);
+
+    List<Order> findBySerialNoIn(List<String> serialNumbers);
 
     Order findByCustomer(Customer customer);
 
@@ -156,7 +158,7 @@ public interface OrderRepo extends JpaRepository<Order, Integer> {
             @Param("endDate") LocalDateTime endDate
     );
 
-    @Query("SELECT o FROM Order o WHERE o.user.id = :userId AND o.date BETWEEN :start AND :end")
+    @Query("SELECT o FROM Order o WHERE o.user.id = :userId AND o.deliveryDate BETWEEN :start AND :end")
     List<Order> findByUserIdAndDateBetween(@Param("userId") Long userId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     @Query("SELECT o FROM Order o WHERE o.user.id = :userId AND o.deliveryDate BETWEEN :start AND :end AND o.status = 'DELIVERED'")
@@ -199,7 +201,7 @@ public interface OrderRepo extends JpaRepository<Order, Integer> {
 
     //daily orders qty for dashboard chart
     @Query("""
-                SELECT od.order.user.name, SUM(od.qty)
+                SELECT o.user.name, SUM(od.qty)
                 FROM Order o
                       JOIN o.orderDetails od
                 WHERE FUNCTION('DATE', o.date) = FUNCTION('DATE', :date)
