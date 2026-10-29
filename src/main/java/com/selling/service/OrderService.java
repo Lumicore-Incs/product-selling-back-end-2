@@ -3,7 +3,6 @@ package com.selling.service;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.util.ArrayList;
 import java.util.List;
 
 
@@ -12,6 +11,7 @@ import com.selling.dto.PaginationResponse;
 import com.selling.dto.TrackingDto;
 import com.selling.dto.UserDto;
 import com.selling.dto.get.MonthlyOrderReportDtoGet;
+import com.selling.dto.get.OrderExportDto;
 import com.selling.dto.get.OrderDtoGet;
 import com.selling.model.Product;
 
@@ -21,6 +21,8 @@ public interface OrderService {
   List<OrderDtoGet> getAllTodayOrderByUserId(UserDto userDto);
 
   List<OrderDtoGet> getAllOrder();
+
+  List<OrderExportDto> exportOrders(LocalDate startDate, LocalDate endDate, Long userId);
 
   List<MonthlyOrderReportDtoGet> getAllOrderByUserId(long userDto, LocalDate date, YearMonth month);
 
@@ -48,7 +50,5 @@ public interface OrderService {
   String generateOrderSerialNumber(Product product, UserDto userDto);
 
   String trackingUpload(List<TrackingDto> trackingList);
-
-  ArrayList<String> getUrgentOrders(Long id, String date);
 
 }

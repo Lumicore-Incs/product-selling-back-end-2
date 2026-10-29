@@ -2,13 +2,10 @@ package com.selling.controller;
 
 import java.io.ByteArrayInputStream;
 import java.time.LocalDate;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.selling.dto.OrderDto;
-import com.selling.dto.get.GetUserDetailsDto;
 import com.selling.dto.get.WeeklyUserOrderDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;

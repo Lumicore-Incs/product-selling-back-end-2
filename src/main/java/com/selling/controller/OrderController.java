@@ -2,12 +2,12 @@ package com.selling.controller;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
 import com.selling.dto.get.MonthlyOrderReportDtoGet;
+import com.selling.dto.get.OrderExportDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -207,18 +207,37 @@ public class OrderController {
         }
     }
 
-    @GetMapping("/getUrgentOrders")
-    public ResponseEntity<Object> getUrgentOrders(
+    @GetMapping("/exportOrders")
+    public ResponseEntity<Object> exportOrders(
             @RequestHeader(name = "Authorization") String authorizationHeader,
-            @RequestParam("id") Long id,
-            @RequestParam("date") String date) {
+            @RequestParam(name = "date", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(name = "startDate", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(name = "endDate", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
         try {
             if (!jwtTokenGenerator.validateJwtToken(authorizationHeader)) {
                 return new ResponseEntity<>(TokenStatus.TOKEN_INVALID, HttpStatus.UNAUTHORIZED);
             }
 
-            ArrayList<String> orders = orderService.getUrgentOrders(id, date);
+            boolean singleDate = date != null;
+            boolean dateRange = startDate != null && endDate != null;
+            if ((singleDate && (startDate != null || endDate != null))
+                    || (!singleDate && !dateRange)
+                    || (dateRange && startDate.isAfter(endDate))) {
+                return ResponseEntity.badRequest()
+                        .body("Provide either date or both startDate and endDate; startDate must not be after endDate.");
+            }
+
+            LocalDate rangeStart = singleDate ? date : startDate;
+            LocalDate rangeEnd = singleDate ? date : endDate;
+            UserDto userDto = jwtTokenGenerator.getUserFromJwtToken(authorizationHeader);
+            boolean admin = Objects.equals(userDto.getRole(), "SUPER USER")
+                    || Objects.equals(userDto.getRole(), "ADMIN");
+            List<OrderExportDto> orders = orderService.exportOrders(
+                    rangeStart, rangeEnd, admin ? null : userDto.getId());
             return new ResponseEntity<>(orders, HttpStatus.OK);
 
         } catch (Exception e) {
