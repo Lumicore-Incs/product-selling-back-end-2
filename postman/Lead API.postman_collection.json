@@ -1,0 +1,177 @@
+{
+  "info": {
+    "_postman_id": "bd26cfd7-a79a-45d7-9c4a-48ecdb8d8ba1",
+    "name": "Lead API",
+    "description": "Create leads, get per-user lead counts and leads, and update lead status.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "token",
+      "value": "paste-your-jwt-token-here"
+    },
+    {
+      "key": "userId",
+      "value": "1"
+    },
+    {
+      "key": "leadId",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Save lead",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n  {\n    \"date\": \"2026-10-28T10:30:00\",\n    \"name\": \"Sample lead 1\",\n    \"contact01\": \"0771234567\",\n    \"contact02\": \"0112345678\",\n    \"address\": \"Colombo\",\n    \"type\": \"CUSTOMER\",\n    \"status\": \"NEW\",\n    \"userId\": 1\n  },\n  {\n    \"date\": \"2026-10-28T11:00:00\",\n    \"name\": \"Sample lead 2\",\n    \"contact01\": \"0711234567\",\n    \"contact02\": \"\",\n    \"address\": \"Kandy\",\n    \"type\": \"CUSTOMER\",\n    \"status\": \"NEW\",\n    \"userId\": 1\n  }\n]",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/lead",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "lead"
+          ]
+        },
+        "description": "Creates multiple leads from a JSON array. Leads belong to the authenticated user; ADMIN and SUPER USER can set userId per lead to assign it to another user."
+      },
+      "response": []
+    },
+    {
+      "name": "Get lead quantity by user (admin)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/lead/getQty",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "lead",
+            "getQty"
+          ]
+        },
+        "description": "Returns userId, userName and total lead qty for each user. ADMIN or SUPER USER access only."
+      },
+      "response": []
+    },
+    {
+      "name": "Get leads by user",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/lead/user/{{userId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "lead",
+            "user",
+            "{{userId}}"
+          ]
+        },
+        "description": "Users can retrieve their own leads; ADMIN or SUPER USER can retrieve any user's leads."
+      },
+      "response": []
+    },
+    {
+      "name": "Update lead status",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"CONTACTED\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/lead/{{leadId}}/status",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "lead",
+            "{{leadId}}",
+            "status"
+          ]
+        },
+        "description": "Updates only the status of the specified lead. Users can update their own leads; ADMIN or SUPER USER can update any lead."
+      },
+      "response": []
+    }
+  ]
+}

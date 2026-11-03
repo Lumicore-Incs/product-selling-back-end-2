@@ -6,6 +6,7 @@ import com.google.gson.JsonParser;
 import com.selling.dto.*;
 import com.selling.dto.get.MonthlyOrderReportDtoGet;
 import com.selling.dto.get.OrderDetailsDtoGet;
+import com.selling.dto.get.OrderExportDto;
 import com.selling.dto.get.OrderDtoGet;
 import com.selling.model.*;
 import com.selling.repository.*;
@@ -61,6 +62,32 @@ public class OrderServiceImpl implements OrderService {
     private UserRepo userRepo;
 
     @Override
+    @Transactional(readOnly = true)
+    public List<OrderExportDto> exportOrders(LocalDate startDate, LocalDate endDate, Long userId) {
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.plusDays(1).atStartOfDay();
+        List<Order> orders = userId == null
+                ? orderRepo.findOrdersForExport(startDateTime, endDateTime)
+                : orderRepo.findOrdersForExportByUser(userId, startDateTime, endDateTime);
+
+        return orders.stream()
+                .map(order -> {
+                    Customer customer = order.getCustomer();
+                    return new OrderExportDto(
+                            customer != null ? customer.getCustomerId() : null,
+                            customer != null ? customer.getCustomerName() : null,
+                            customer != null ? customer.getAddress() : null,
+                            customer != null ? customer.getContact01() : null,
+                            customer != null ? customer.getContact02() : null,
+                            order.getDate() != null ? order.getDate().toLocalDate() : null,
+                            order.getWeyBillId(),
+                            order.getTotalPrice(),
+                            order.getStatus());
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public String generateOrderSerialNumber(Product product, UserDto userDto) {
         Order last = orderRepo.findTopBySerialNoStartingWithOrderBySerialNoDesc(userDto.getSerialPrefix());
 
@@ -111,10 +138,6 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    @Override
-    public ArrayList<String> getUrgentOrders(Long id, String date) {
-        return null;
-    }
 
     private String updateTrackingForOrder(TrackingDto trackingDto) {
         try {

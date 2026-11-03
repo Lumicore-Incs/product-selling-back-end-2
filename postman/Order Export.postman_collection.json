@@ -1,0 +1,108 @@
+{
+  "info": {
+    "_postman_id": "96d83510-64d3-4e68-9e96-2d21a10984ad",
+    "name": "Order Export API",
+    "description": "Export order data for one date or an inclusive date range.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "token",
+      "value": "paste-your-jwt-token-here"
+    },
+    {
+      "key": "date",
+      "value": "2026-10-26"
+    },
+    {
+      "key": "startDate",
+      "value": "2026-10-01"
+    },
+    {
+      "key": "endDate",
+      "value": "2026-10-26"
+    }
+  ],
+  "item": [
+    {
+      "name": "Export orders for one date",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/order/exportOrders?date={{date}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "order",
+            "exportOrders"
+          ],
+          "query": [
+            {
+              "key": "date",
+              "value": "{{date}}"
+            }
+          ]
+        },
+        "description": "Returns orders created on the specified date (yyyy-MM-dd)."
+      },
+      "response": []
+    },
+    {
+      "name": "Export orders for date range",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/order/exportOrders?startDate={{startDate}}&endDate={{endDate}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "order",
+            "exportOrders"
+          ],
+          "query": [
+            {
+              "key": "startDate",
+              "value": "{{startDate}}"
+            },
+            {
+              "key": "endDate",
+              "value": "{{endDate}}"
+            }
+          ]
+        },
+        "description": "Returns orders between startDate and endDate, inclusive (yyyy-MM-dd)."
+      },
+      "response": []
+    }
+  ]
+}
